@@ -17,7 +17,7 @@ function formatCurrency(n) {
 
 export default function App() {
   const [products, setProducts] = useState([]);
-  const [cart, setCart] = useState([]); // [{id,name,price,qty}] Hola
+  const [cart, setCart] = useState([]); // cart: Array of {id, name, price, qty}
   const [region, setRegion] = useState('CR');
   const [coupon, setCoupon] = useState('');
   const [isPremium, setIsPremium] = useState(true);
