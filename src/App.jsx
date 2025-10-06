@@ -17,7 +17,7 @@ function formatCurrency(n) {
 
 export default function App() {
   const [products, setProducts] = useState([]);
-  const [cart, setCart] = useState([]); // [{id,name,price,qty}]
+  const [cart, setCart] = useState([]); // cart: Array of {id, name, price, qty}
   const [region, setRegion] = useState('CR');
   const [coupon, setCoupon] = useState('');
   const [isPremium, setIsPremium] = useState(true);
@@ -90,7 +90,7 @@ export default function App() {
 
   return (
     <div style={{ padding: 16, fontFamily: 'system-ui' }}>
-      <h1>Tienda (versión mala, lista para refactor)</h1>
+      <h1>Tienda</h1>
 
       <div style={{ display: 'flex', gap: 24 }}>
         <section>
