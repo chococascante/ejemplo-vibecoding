@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { formatCurrency } from './utils/money';
 import { info as logInfo, setLevel as setLogLevel } from './utils/log';
+import { calcTotalNumber } from './domain/pricing';
 
 // Simula "API"
 async function fetchProducts() {
@@ -42,35 +43,14 @@ export default function App() {
   }
 
   function recalc(cartArg, premiumArg, couponArg, regionArg) {
-    // subtotal
-    let subtotal = 0;
-    for (const item of cartArg) {
-      subtotal += (item.price || 0) * (item.qty || 0);
-    }
-    // premium 5%
-    if (premiumArg) {
-      subtotal = subtotal - subtotal * 0.05;
-      logInfo('[INFO] Premium -5%');
-    }
-    // cupón
-    if (couponArg === 'PROMO10' && subtotal >= 50) {
-      subtotal = subtotal * 0.90;
-      logInfo('[INFO] Cupón PROMO10 -10%');
-    } else if (couponArg === 'FIJO20' && subtotal >= 50) {
-      subtotal = subtotal - 20;
-      logInfo('[INFO] Cupón FIJO20 -$20');
-    }
-    // impuesto por región
-    let taxRate = 0.10;
-    if (regionArg === 'CR') taxRate = 0.13;
-    else if (regionArg === 'US-CA') taxRate = 0.0725;
-    else if (regionArg === 'US-TX') taxRate = 0.0625;
-    const taxes = subtotal * taxRate;
-    let total = subtotal + taxes;
+    const result = calcTotalNumber(cartArg, premiumArg, couponArg, regionArg);
 
-    total = Math.round(total * 100) / 100;
-    setTotalDisplay(formatCurrency(total));
-    logInfo(`[INFO] Subtotal=${formatCurrency(subtotal)} Taxes=${formatCurrency(taxes)} Total=${formatCurrency(total)}`);
+    if (result.appliedPremium) logInfo('[INFO] Premium -5%');
+    if (result.appliedCoupon === 'PROMO10') logInfo('[INFO] Cupón PROMO10 -10%');
+    else if (result.appliedCoupon === 'FIJO20') logInfo('[INFO] Cupón FIJO20 -$20');
+
+    setTotalDisplay(formatCurrency(result.total));
+    logInfo(`[INFO] Subtotal=${formatCurrency(result.subtotalAfterDiscounts)} Taxes=${formatCurrency(result.taxes)} Total=${formatCurrency(result.total)}`);
   }
 
   function handlePremium(e) {
