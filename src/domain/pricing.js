@@ -17,15 +17,16 @@ export function applyUserDiscounts(subtotal, isPremium) {
   return { subtotal: newSubtotal, appliedPremium };
 }
 
+import { createCouponStrategy } from './coupons';
+
 export function applyCoupons(subtotal, coupon) {
   let newSubtotal = subtotal;
   let appliedCoupon = null;
-  if (coupon === 'PROMO10' && subtotal >= 50) {
-    newSubtotal = newSubtotal * 0.90;
-    appliedCoupon = 'PROMO10';
-  } else if (coupon === 'FIJO20' && subtotal >= 50) {
-    newSubtotal = newSubtotal - 20;
-    appliedCoupon = 'FIJO20';
+  const strategy = createCouponStrategy(coupon);
+  if (strategy) {
+    const { subtotal: after, applied } = strategy.apply(subtotal);
+    newSubtotal = after;
+    if (applied) appliedCoupon = coupon;
   }
   return { subtotal: newSubtotal, appliedCoupon };
 }
