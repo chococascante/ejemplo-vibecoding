@@ -31,13 +31,11 @@ export function applyCoupons(subtotal, coupon) {
   return { subtotal: newSubtotal, appliedCoupon };
 }
 
+import { createTaxPolicy } from './taxes';
+
 export function computeTaxes(subtotal, region) {
-  let taxRate = 0.10;
-  if (region === 'CR') taxRate = 0.13;
-  else if (region === 'US-CA') taxRate = 0.0725;
-  else if (region === 'US-TX') taxRate = 0.0625;
-  const taxes = subtotal * taxRate;
-  return { taxes, taxRate };
+  const policy = createTaxPolicy(region);
+  return policy.compute(subtotal);
 }
 
 // Orchestrator: returns numeric results and metadata (pure)
