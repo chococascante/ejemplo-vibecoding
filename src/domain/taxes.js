@@ -36,11 +36,19 @@ export class DefaultPolicy extends TaxPolicy {
   }
 }
 
+export class TestPolicy extends TaxPolicy {
+  // For tests: no taxes
+  rate() {
+    return 0.0;
+  }
+}
+
 const policyMap = {
   CR: CRPolicy,
   'US-CA': USCAPolicy,
   'US-TX': USTXPolicy,
   OTRA: DefaultPolicy,
+  TEST: TestPolicy,
 };
 
 export function createTaxPolicy(region) {

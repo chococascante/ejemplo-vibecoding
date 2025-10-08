@@ -25,4 +25,13 @@ describe('pricing domain', () => {
     const res = calcTotalNumber(cart, true, 'PROMO10', 'CR');
     expect(res.total).toBeCloseTo(198.06, 2);
   });
+
+  test('calcTotalNumber with TEST region applies zero taxes', () => {
+    const cart = [
+      { id: 1, name: 'Item', price: 50, qty: 1 },
+    ];
+    const res = calcTotalNumber(cart, false, '', 'TEST');
+    expect(res.taxes).toBeCloseTo(0);
+    expect(res.total).toBeCloseTo(res.subtotalAfterDiscounts);
+  });
 });

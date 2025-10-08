@@ -33,8 +33,14 @@ export function applyCoupons(subtotal, coupon, cart = []) {
 
 import { createTaxPolicy } from './taxes';
 
-export function computeTaxes(subtotal, region) {
-  const policy = createTaxPolicy(region);
+// computeTaxes supports DI: accept a region string or a TaxPolicy instance
+export function computeTaxes(subtotal, regionOrPolicy) {
+  let policy;
+  if (regionOrPolicy && typeof regionOrPolicy.compute === 'function') {
+    policy = regionOrPolicy;
+  } else {
+    policy = createTaxPolicy(regionOrPolicy);
+  }
   return policy.compute(subtotal);
 }
 
