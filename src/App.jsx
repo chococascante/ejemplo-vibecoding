@@ -2,6 +2,12 @@ import { useEffect, useState } from "react";
 import { formatCurrency } from "./utils/money.js";
 import { setLogLevel, LOG_LEVELS, logCartOperation, logInfo } from "./utils/log.js";
 import { calcTotalNumber } from "./domain/checkout.js";
+import { defaultTaxPolicy } from "./domain/taxPolicies.js";
+
+// Importar los nuevos componentes
+import ProductList from "./components/ProductList.jsx";
+import Cart from "./components/Cart.jsx";
+import Checkout from "./components/Checkout.jsx";
 
 // Configurar logging inicial
 setLogLevel(LOG_LEVELS.INFO);
@@ -15,40 +21,128 @@ async function fetchProducts() {
   ];
 }
 
+/**
+ * Componente principal App - Orquestador de la aplicación
+ * 
+ * CAMBIO IMPLEMENTADO: Separación de UI en componentes especializados
+ * 
+ * App ahora actúa como orquestador que:
+ * - Gestiona el estado global de la aplicación
+ * - Coordina la comunicación entre componentes
+ * - Conecta los componentes UI con la lógica de dominio
+ * - Mantiene la compatibilidad funcional completa
+ * 
+ * JUSTIFICACIÓN DE LA REFACTORIZACIÓN:
+ * - MODULARIDAD: Cada componente tiene responsabilidades específicas
+ * - MANTENIBILIDAD: Cambios en UI no afectan la lógica de negocio
+ * - REUTILIZACIÓN: Componentes pueden usarse en otros contextos
+ * - TESTING: Testing independiente de cada componente
+ * - ESCALABILIDAD: Fácil agregar nuevas funcionalidades
+ * 
+ * @component App
+ * @version 2.0.0 (Refactorizado con componentes)
+ * @author Juan Alberto Quiros Gonzalez
+ */
 export default function App() {
+  // Estados de la aplicación
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]); // cart: Array of {id, name, price, qty}
   const [region, setRegion] = useState('CR');
   const [coupon, setCoupon] = useState('');
   const [isPremium, setIsPremium] = useState(true);
   const [totalDisplay, setTotalDisplay] = useState('$0.00');
+  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
+  const [currentTaxPolicy, setCurrentTaxPolicy] = useState(defaultTaxPolicy);
+  const [lastCalculationDetails, setLastCalculationDetails] = useState(null);
 
+  // Cargar productos al montar el componente
   useEffect(() => {
-    fetchProducts().then(setProducts);
+    fetchProducts()
+      .then(productData => {
+        setProducts(productData);
+        setIsLoadingProducts(false);
+        logInfo('Productos cargados exitosamente', { count: productData.length });
+      })
+      .catch(error => {
+        console.error('Error cargando productos:', error);
+        setIsLoadingProducts(false);
+      });
   }, []);
 
-  function addToCart(p) {
+  /**
+   * Maneja la adición de productos al carrito
+   * Función callback que se pasa a ProductList
+   */
+  function handleAddToCart(product) {
     const copy = cart.slice();
-    const idx = copy.findIndex(i => i.id === p.id);
-    if (idx >= 0) copy[idx].qty += 1;
-    else copy.push({ ...p, qty: 1 });
+    const idx = copy.findIndex(i => i.id === product.id);
+    
+    if (idx >= 0) {
+      copy[idx].qty += 1;
+    } else {
+      copy.push({ ...product, qty: 1 });
+    }
+    
     setCart(copy);
     
     // Usar el sistema de logging centralizado
-    logCartOperation('add', p.name, { productId: p.id, price: p.price });
+    logCartOperation('add', product.name, { 
+      productId: product.id, 
+      price: product.price,
+      newQuantity: idx >= 0 ? copy[idx].qty : 1
+    });
     
-    recalc(copy, isPremium, coupon, region);
+    // Recalcular totales
+    recalc(copy, isPremium, coupon, region, currentTaxPolicy);
   }
 
-  function changeQty(id, qty) {
+  /**
+   * Maneja el cambio de cantidad en el carrito
+   * Función callback que se pasa a Cart
+   */
+  function handleChangeQuantity(id, qty) {
     const copy = cart.map(i => i.id === id ? { ...i, qty: Math.max(0, qty) } : i);
     setCart(copy);
-    recalc(copy, isPremium, coupon, region);
+    
+    // Log del cambio de cantidad
+    const item = copy.find(i => i.id === id);
+    if (item) {
+      logCartOperation('update_quantity', item.name, { 
+        productId: id, 
+        newQuantity: qty,
+        action: qty === 0 ? 'removed' : 'updated'
+      });
+    }
+    
+    recalc(copy, isPremium, coupon, region, currentTaxPolicy);
   }
 
-  function recalc(cartArg, premiumArg, couponArg, regionArg) {
+  /**
+   * Maneja la eliminación de items del carrito
+   * Función callback opcional para Cart
+   */
+  function handleRemoveItem(item) {
+    const copy = cart.filter(i => i.id !== item.id);
+    setCart(copy);
+    
+    logCartOperation('remove', item.name, { 
+      productId: item.id,
+      removedQuantity: item.qty
+    });
+    
+    recalc(copy, isPremium, coupon, region, currentTaxPolicy);
+  }
+
+  /**
+   * Función de recálculo mejorada con detalles
+   * Ahora guarda los detalles del cálculo para mostrar en UI
+   */
+  function recalc(cartArg, premiumArg, couponArg, regionArg, taxPolicy = defaultTaxPolicy) {
     // Usar la función orquestadora del dominio
-    const calculation = calcTotalNumber(cartArg, premiumArg, couponArg, regionArg);
+    const calculation = calcTotalNumber(cartArg, premiumArg, couponArg, regionArg, taxPolicy);
+    
+    // Guardar detalles para mostrar en UI
+    setLastCalculationDetails(calculation);
     
     // Actualizar la visualización del total
     setTotalDisplay(formatCurrency(calculation.finalTotal));
@@ -70,78 +164,97 @@ export default function App() {
     logInfo(`Subtotal=${formatCurrency(calculation.subtotal)} Taxes=${formatCurrency(calculation.taxes.taxAmount)} Total=${formatCurrency(calculation.finalTotal)}`);
   }
 
+  /**
+   * Callbacks para el componente Checkout
+   */
   function handlePremium(e) {
-    setIsPremium(e.target.checked);
-    recalc(cart, e.target.checked, coupon, region);
+    const newIsPremium = e.target.checked;
+    setIsPremium(newIsPremium);
+    logInfo(`Usuario ${newIsPremium ? 'activó' : 'desactivó'} premium`);
+    recalc(cart, newIsPremium, coupon, region, currentTaxPolicy);
   }
+
   function handleCoupon(e) {
-    setCoupon(e.target.value);
-    recalc(cart, isPremium, e.target.value, region);
+    const newCoupon = e.target.value;
+    setCoupon(newCoupon);
+    logInfo(`Usuario cambió cupón a: ${newCoupon || '(ninguno)'}`);
+    recalc(cart, isPremium, newCoupon, region, currentTaxPolicy);
   }
+
   function handleRegion(e) {
-    setRegion(e.target.value);
-    recalc(cart, isPremium, coupon, e.target.value);
+    const newRegion = e.target.value;
+    setRegion(newRegion);
+    logInfo(`Usuario cambió región a: ${newRegion}`);
+    recalc(cart, isPremium, coupon, newRegion, currentTaxPolicy);
+  }
+
+  /**
+   * Callback para cambio de política de impuestos (funcionalidad avanzada)
+   */
+  function handleTaxPolicyChange(newPolicy, policyType) {
+    setCurrentTaxPolicy(newPolicy);
+    logInfo(`Usuario cambió política de impuestos a: ${policyType}`);
+    recalc(cart, isPremium, coupon, region, newPolicy);
   }
 
   return (
     <div style={{ padding: 16, fontFamily: 'system-ui' }}>
-      <h1>Tienda</h1>
-
+      <h1>Tienda - Arquitectura por Componentes</h1>
+      
       <div style={{ display: 'flex', gap: 24 }}>
-        <section>
-          <h2>Productos</h2>
-          {products.map(p => (
-            <div key={p.id} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-              <span>{p.name} — {formatCurrency(p.price)}</span>
-              <button onClick={() => addToCart(p)}>Agregar</button>
-            </div>
-          ))}
-        </section>
+        {/* Componente ProductList - Lista de productos */}
+        <ProductList 
+          products={products}
+          onAddToCart={handleAddToCart}
+          loading={isLoadingProducts}
+        />
 
-        <section>
-          <h2>Carrito</h2>
-          {cart.length === 0 && <p>(vacío)</p>}
-          {cart.map(item => (
-            <div key={item.id} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-              <span>{item.name}</span>
-              <input
-                type="number"
-                min={0}
-                value={item.qty}
-                onChange={e => changeQty(item.id, Number(e.target.value))}
-                style={{ width: 60 }}
-              />
-              <span>@ {formatCurrency(item.price)}</span>
-            </div>
-          ))}
-        </section>
+        {/* Componente Cart - Gestión del carrito */}
+        <Cart 
+          cartItems={cart}
+          onChangeQuantity={handleChangeQuantity}
+          onRemoveItem={handleRemoveItem}
+          showSubtotal={true}
+          editable={true}
+        />
 
-        <section>
-          <h2>Checkout</h2>
-          <label>
-            <input type="checkbox" checked={isPremium} onChange={handlePremium} />
-            Usuario Premium (5%)
-          </label>
-          <div style={{ marginTop: 8 }}>
-            <label> Cupón: </label>
-            <select value={coupon} onChange={handleCoupon}>
-              <option value="">(ninguno)</option>
-              <option value="PROMO10">PROMO10 (-10% min 50)</option>
-              <option value="FIJO20">FIJO20 (-$20 min 50)</option>
-            </select>
-          </div>
-          <div style={{ marginTop: 8 }}>
-            <label>Región: </label>
-            <select value={region} onChange={handleRegion}>
-              <option value="CR">CR (13%)</option>
-              <option value="US-CA">US-CA (7.25%)</option>
-              <option value="US-TX">US-TX (6.25%)</option>
-              <option value="OTRA">OTRA (10%)</option>
-            </select>
-          </div>
+        {/* Componente Checkout - Proceso de checkout */}
+        <Checkout 
+          isPremium={isPremium}
+          coupon={coupon}
+          region={region}
+          totalDisplay={totalDisplay}
+          onPremiumChange={handlePremium}
+          onCouponChange={handleCoupon}
+          onRegionChange={handleRegion}
+          onTaxPolicyChange={handleTaxPolicyChange}
+          calculationDetails={lastCalculationDetails}
+          showAdvancedOptions={false} // Cambiar a true para mostrar opciones avanzadas
+        />
+      </div>
 
-          <h3 style={{ marginTop: 16 }}>Total: {totalDisplay}</h3>
-        </section>
+      {/* Footer informativo */}
+      <div style={{ 
+        marginTop: '32px', 
+        padding: '16px', 
+        backgroundColor: '#f5f5f5', 
+        borderRadius: '4px',
+        fontSize: '0.9em',
+        color: '#666'
+      }}>
+        <strong>🏗️ Arquitectura Refactorizada:</strong>
+        <br />
+        ✅ <strong>ProductList</strong>: Componente especializado para mostrar productos
+        <br />
+        ✅ <strong>Cart</strong>: Componente dedicado para gestión del carrito
+        <br />
+        ✅ <strong>Checkout</strong>: Componente para proceso de compra y cálculos
+        <br />
+        ✅ <strong>App</strong>: Orquestador que conecta componentes con dominio
+        <br />
+        <small style={{ fontStyle: 'italic' }}>
+          Misma funcionalidad, mejor organización y mantenibilidad
+        </small>
       </div>
     </div>
   );
