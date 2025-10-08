@@ -19,12 +19,12 @@ export function applyUserDiscounts(subtotal, isPremium) {
 
 import { createCouponStrategy } from './coupons';
 
-export function applyCoupons(subtotal, coupon) {
+export function applyCoupons(subtotal, coupon, cart = []) {
   let newSubtotal = subtotal;
   let appliedCoupon = null;
   const strategy = createCouponStrategy(coupon);
   if (strategy) {
-    const { subtotal: after, applied } = strategy.apply(subtotal);
+    const { subtotal: after, applied } = strategy.apply(subtotal, cart);
     newSubtotal = after;
     if (applied) appliedCoupon = coupon;
   }
@@ -42,7 +42,7 @@ export function computeTaxes(subtotal, region) {
 export function calcTotalNumber(cart, isPremium, coupon, region) {
   const subtotalBefore = computeSubtotal(cart);
   const { subtotal: afterUser, appliedPremium } = applyUserDiscounts(subtotalBefore, isPremium);
-  const { subtotal: afterCoupon, appliedCoupon } = applyCoupons(afterUser, coupon);
+  const { subtotal: afterCoupon, appliedCoupon } = applyCoupons(afterUser, coupon, cart);
   const { taxes, taxRate } = computeTaxes(afterCoupon, region);
   let total = afterCoupon + taxes;
   total = Math.round(total * 100) / 100;

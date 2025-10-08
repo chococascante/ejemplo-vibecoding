@@ -20,6 +20,7 @@ export default function Checkout({
           <option value="">(ninguno)</option>
           <option value="PROMO10">PROMO10 (-10% min 50)</option>
           <option value="FIJO20">FIJO20 (-$20 min 50)</option>
+          <option value="BOGO_HALF">BOGO_HALF (2do ítem mitad de precio)</option>
         </select>
       </div>
       <div style={{ marginTop: 8 }}>
