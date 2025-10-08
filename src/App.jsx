@@ -5,15 +5,7 @@ import { calcTotalNumber } from './domain/pricing';
 import ProductList from './components/ProductList';
 import Cart from './components/Cart';
 import Checkout from './components/Checkout';
-
-// Simula "API"
-async function fetchProducts() {
-  return [
-    { id: 1, name: 'Mouse', price: 20 },
-    { id: 2, name: 'Teclado', price: 35 },
-    { id: 3, name: 'Monitor', price: 150 },
-  ];
-}
+import { fetchProducts } from './services/catalog';
 
 // formatCurrency moved to src/utils/money.js
 
@@ -25,8 +17,29 @@ export default function App() {
   const [isPremium, setIsPremium] = useState(true);
   const [totalDisplay, setTotalDisplay] = useState('$0.00');
 
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState(null);
+
   useEffect(() => {
-    fetchProducts().then(setProducts);
+    let mounted = true;
+    setLoading(true);
+    setLoadError(null);
+    fetchProducts()
+      .then((list) => {
+        if (!mounted) return;
+        setProducts(list);
+      })
+      .catch((err) => {
+        if (!mounted) return;
+        setLoadError(err?.message || 'Error');
+      })
+      .finally(() => {
+        if (!mounted) return;
+        setLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   function addToCart(p) {
@@ -74,7 +87,14 @@ export default function App() {
       <h1>Tienda</h1>
 
       <div style={{ display: 'flex', gap: 24 }}>
-        <ProductList products={products} onAdd={addToCart} />
+        {loading ? (
+          <div>Cargando...</div>
+        ) : loadError ? (
+          <div>Error</div>
+        ) : (
+          <ProductList products={products} onAdd={addToCart} />
+        )}
+
         <Cart cart={cart} onChangeQty={changeQty} />
         <Checkout
           isPremium={isPremium}
