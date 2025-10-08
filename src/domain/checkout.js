@@ -6,13 +6,19 @@
  * e impuestos. Todas las funciones son puras (sin efectos secundarios)
  * para facilitar testing y mantenimiento.
  * 
+ * PASO 5 - LIMPIEZA IMPLEMENTADA:
+ * - ELIMINADAS todas las dependencias de logging
+ * - REMOVIDOS todos los efectos secundarios (console.log, etc.)
+ * - FUNCIONES PURAS: Solo retornan valores basados en inputs
+ * - SIN DEPENDENCIAS GLOBALES: Completamente autocontenido
+ * - DOMINIO LIMPIO: Solo lógica de negocio, sin infraestructura
+ * 
  * @module CheckoutDomain
- * @version 1.0.0
+ * @version 2.0.0 (Limpiado - Sin efectos secundarios)
  * @author Juan Alberto Quiros Gonzalez
  */
 
 import { roundMoney, isValidMoneyValue } from '../utils/money.js';
-import { logFinancialCalculation, logWarn } from '../utils/log.js';
 import { defaultTaxPolicy } from './taxPolicies.js';
 
 /**
@@ -50,6 +56,11 @@ export const PREMIUM_CONFIG = {
  * considerando la cantidad de cada producto. Valida que los valores sean
  * números válidos antes de realizar los cálculos.
  * 
+ * LIMPIEZA APLICADA:
+ * - Eliminado logging (logWarn, logFinancialCalculation)
+ * - Función completamente pura sin efectos secundarios
+ * - Validaciones silenciosas que retornan valores seguros
+ * 
  * @param {Array<Object>} cartItems - Array de items del carrito
  * @param {number} cartItems[].price - Precio unitario del producto
  * @param {number} cartItems[].qty - Cantidad del producto en el carrito
@@ -63,9 +74,8 @@ export const PREMIUM_CONFIG = {
  * computeSubtotal(cart); // 75.00
  */
 export function computeSubtotal(cartItems) {
-  // Validación de entrada
+  // Validación de entrada - silenciosa, sin logging
   if (!Array.isArray(cartItems)) {
-    logWarn('computeSubtotal: cartItems no es un array válido', { cartItems });
     return 0;
   }
 
@@ -76,26 +86,14 @@ export function computeSubtotal(cartItems) {
     const price = Number(item?.price) || 0;
     const qty = Number(item?.qty) || 0;
     
-    if (!isValidMoneyValue(price)) {
-      logWarn('computeSubtotal: precio inválido detectado', { item, price });
-      continue;
-    }
-    
-    if (qty < 0) {
-      logWarn('computeSubtotal: cantidad negativa detectada', { item, qty });
-      continue;
+    if (!isValidMoneyValue(price) || qty < 0) {
+      continue; // Skip invalid items silently
     }
     
     subtotal += price * qty;
   }
   
-  const result = roundMoney(subtotal);
-  logFinancialCalculation('Subtotal', { 
-    itemCount: cartItems.length, 
-    subtotal: result 
-  });
-  
-  return result;
+  return roundMoney(subtotal);
 }
 
 /**
@@ -103,6 +101,11 @@ export function computeSubtotal(cartItems) {
  * 
  * Función pura que calcula el descuento para usuarios premium.
  * Si el usuario es premium, aplica el descuento configurado.
+ * 
+ * LIMPIEZA APLICADA:
+ * - Eliminado logging (logWarn, logFinancialCalculation)
+ * - Validaciones silenciosas con valores por defecto seguros
+ * - Función completamente pura
  * 
  * @param {number} subtotal - Subtotal antes del descuento premium
  * @param {boolean} isPremium - Indica si el usuario es premium
@@ -119,15 +122,13 @@ export function computeSubtotal(cartItems) {
  * // { newSubtotal: 100, discountAmount: 0, applied: false }
  */
 export function applyUserDiscounts(subtotal, isPremium) {
-  // Validación de entrada
+  // Validación de entrada - silenciosa
   if (!isValidMoneyValue(subtotal)) {
-    logWarn('applyUserDiscounts: subtotal inválido', { subtotal });
     return { newSubtotal: 0, discountAmount: 0, applied: false };
   }
   
   if (typeof isPremium !== 'boolean') {
-    logWarn('applyUserDiscounts: isPremium debe ser booleano', { isPremium });
-    isPremium = false;
+    isPremium = false; // Default silencioso
   }
   
   if (!isPremium) {
@@ -141,13 +142,6 @@ export function applyUserDiscounts(subtotal, isPremium) {
   const discountAmount = roundMoney(subtotal * PREMIUM_CONFIG.discountRate);
   const newSubtotal = roundMoney(subtotal - discountAmount);
   
-  logFinancialCalculation('Premium Discount', {
-    originalSubtotal: subtotal,
-    discountRate: PREMIUM_CONFIG.discountRate,
-    discountAmount,
-    newSubtotal
-  });
-  
   return {
     newSubtotal,
     discountAmount,
@@ -160,6 +154,11 @@ export function applyUserDiscounts(subtotal, isPremium) {
  * 
  * Función pura que valida y aplica cupones de descuento según las reglas
  * configuradas. Maneja tanto descuentos porcentuales como fijos.
+ * 
+ * LIMPIEZA APLICADA:
+ * - Eliminado logging (logWarn, logFinancialCalculation)
+ * - Validaciones silenciosas que retornan resultados consistentes
+ * - Función completamente pura sin efectos secundarios
  * 
  * @param {number} subtotal - Subtotal antes del cupón
  * @param {string} couponCode - Código del cupón a aplicar
@@ -177,9 +176,8 @@ export function applyUserDiscounts(subtotal, isPremium) {
  * // { newSubtotal: 30, discountAmount: 0, applied: false, reason: 'Monto mínimo no alcanzado' }
  */
 export function applyCoupons(subtotal, couponCode) {
-  // Validación de entrada
+  // Validación de entrada - silenciosa
   if (!isValidMoneyValue(subtotal)) {
-    logWarn('applyCoupons: subtotal inválido', { subtotal });
     return { 
       newSubtotal: 0, 
       discountAmount: 0, 
@@ -203,7 +201,6 @@ export function applyCoupons(subtotal, couponCode) {
   // Verificar si el cupón existe
   const coupon = COUPON_CONFIG[normalizedCoupon];
   if (!coupon) {
-    logWarn('applyCoupons: cupón no válido', { couponCode: normalizedCoupon });
     return { 
       newSubtotal: subtotal, 
       discountAmount: 0, 
@@ -214,11 +211,6 @@ export function applyCoupons(subtotal, couponCode) {
   
   // Verificar monto mínimo
   if (subtotal < coupon.minAmount) {
-    logWarn('applyCoupons: monto mínimo no alcanzado', { 
-      subtotal, 
-      required: coupon.minAmount,
-      coupon: normalizedCoupon 
-    });
     return { 
       newSubtotal: subtotal, 
       discountAmount: 0, 
@@ -239,14 +231,6 @@ export function applyCoupons(subtotal, couponCode) {
     newSubtotal = roundMoney(subtotal - discountAmount);
   }
   
-  logFinancialCalculation('Coupon Applied', {
-    couponCode: normalizedCoupon,
-    type: coupon.type,
-    originalSubtotal: subtotal,
-    discountAmount,
-    newSubtotal
-  });
-  
   return {
     newSubtotal,
     discountAmount,
@@ -259,6 +243,7 @@ export function applyCoupons(subtotal, couponCode) {
  * Calcula los impuestos usando la política de impuestos inyectada
  * 
  * CAMBIO IMPLEMENTADO: Inyección de dependencias para políticas de impuestos
+ * LIMPIEZA APLICADA: Eliminado logging y dependencias externas
  * 
  * Justificación del cambio:
  * - FLEXIBILIDAD: Permite diferentes estrategias de cálculo de impuestos
@@ -266,6 +251,7 @@ export function applyCoupons(subtotal, couponCode) {
  * - TESTABILIDAD: Permite mockear políticas para pruebas unitarias
  * - SEPARACIÓN DE RESPONSABILIDADES: La lógica de impuestos está en políticas independientes
  * - CUMPLIMIENTO NORMATIVO: Diferentes países/clientes pueden tener reglas tributarias distintas
+ * - PUREZA: Sin efectos secundarios, función completamente pura
  * 
  * Ejemplos de uso:
  * - Política regional: Tasas fijas por país (CR: 13%, US-CA: 7.25%)
@@ -292,9 +278,8 @@ export function applyCoupons(subtotal, couponCode) {
  * computeTaxes(100, 'CR', premiumPolicy, { isPremium: true });
  */
 export function computeTaxes(subtotal, region, taxPolicy = defaultTaxPolicy, additionalContext = {}) {
-  // Validación de entrada
+  // Validación de entrada - silenciosa
   if (!isValidMoneyValue(subtotal)) {
-    logWarn('computeTaxes: subtotal inválido', { subtotal });
     return { 
       taxAmount: 0, 
       taxRate: 0, 
@@ -304,12 +289,9 @@ export function computeTaxes(subtotal, region, taxPolicy = defaultTaxPolicy, add
     };
   }
   
-  // Validación de la política de impuestos
+  // Validación de la política de impuestos - silenciosa
   if (!taxPolicy || typeof taxPolicy.calculateTax !== 'function') {
-    logWarn('computeTaxes: política de impuestos inválida, usando política por defecto', { 
-      taxPolicy: taxPolicy?.name || 'undefined'
-    });
-    taxPolicy = defaultTaxPolicy;
+    taxPolicy = defaultTaxPolicy; // Fallback silencioso
   }
   
   // Preparar contexto para la política
@@ -321,30 +303,10 @@ export function computeTaxes(subtotal, region, taxPolicy = defaultTaxPolicy, add
   try {
     // Delegar el cálculo a la política inyectada
     const result = taxPolicy.calculateTax(subtotal, context);
-    
-    // Log del cálculo con información de la política utilizada
-    logFinancialCalculation('Tax Calculation with Policy', {
-      policyName: taxPolicy.name,
-      subtotal,
-      context,
-      result: {
-        taxAmount: result.taxAmount,
-        taxRate: result.taxRate,
-        totalWithTax: result.totalWithTax
-      }
-    });
-    
     return result;
     
   } catch (error) {
-    logWarn('computeTaxes: Error en cálculo de impuestos', { 
-      error: error.message, 
-      policyName: taxPolicy.name,
-      subtotal,
-      context
-    });
-    
-    // Retorno seguro en caso de error
+    // Retorno seguro en caso de error - sin logging
     return {
       taxAmount: 0,
       taxRate: 0,
@@ -360,6 +322,7 @@ export function computeTaxes(subtotal, region, taxPolicy = defaultTaxPolicy, add
  * Función orquestadora que coordina todos los cálculos del checkout con DI
  * 
  * CAMBIO IMPLEMENTADO: Soporte para inyección de política de impuestos
+ * LIMPIEZA APLICADA: Eliminado logging del dominio, función completamente pura
  * 
  * Esta función coordina la ejecución de todos los cálculos necesarios
  * para obtener el total final del carrito, aplicando descuentos, cupones
@@ -371,6 +334,7 @@ export function computeTaxes(subtotal, region, taxPolicy = defaultTaxPolicy, add
  * - Mantiene compatibilidad total con código existente (taxPolicy opcional)
  * - Facilita testing con políticas mock
  * - Soporta contextos adicionales para políticas complejas
+ * - PUREZA: Sin efectos secundarios, completamente determinística
  * 
  * @param {Array<Object>} cartItems - Items del carrito
  * @param {boolean} isPremium - Si el usuario es premium
@@ -431,31 +395,10 @@ export function calcTotalNumber(cartItems, isPremium, couponCode, region, taxPol
       }
     };
     
-    logFinancialCalculation('Final Total Calculation with Tax Policy', {
-      taxPolicy: result.taxPolicyUsed,
-      steps: {
-        initialSubtotal: subtotal,
-        afterPremium: premiumDiscount.newSubtotal,
-        afterCoupon: couponDiscount.newSubtotal,
-        taxes: taxes.taxAmount,
-        finalTotal: result.finalTotal
-      },
-      context: combinedTaxContext
-    });
-    
     return result;
     
   } catch (error) {
-    logWarn('calcTotalNumber: Error en cálculo', { 
-      error: error.message, 
-      cartItems, 
-      isPremium, 
-      couponCode, 
-      region,
-      taxPolicy: taxPolicy?.name
-    });
-    
-    // Retorno seguro en caso de error
+    // Retorno seguro en caso de error - sin logging
     return {
       subtotal: 0,
       premiumDiscount: { newSubtotal: 0, discountAmount: 0, applied: false },
