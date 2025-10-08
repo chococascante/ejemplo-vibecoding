@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
+import { formatCurrency } from "./utils/money.js";
+import { setLogLevel, LOG_LEVELS, logCartOperation, logInfo } from "./utils/log.js";
+import { calcTotalNumber } from "./domain/checkout.js";
 
-let GLOBAL_LOG_LEVEL = 'info';
+// Configurar logging inicial
+setLogLevel(LOG_LEVELS.INFO);
 
 // Simula "API"
 async function fetchProducts() {
@@ -9,10 +13,6 @@ async function fetchProducts() {
     { id: 2, name: 'Teclado', price: 35 },
     { id: 3, name: 'Monitor', price: 150 },
   ];
-}
-
-function formatCurrency(n) {
-  return `$${n.toFixed(2)}`;
 }
 
 export default function App() {
@@ -33,7 +33,10 @@ export default function App() {
     if (idx >= 0) copy[idx].qty += 1;
     else copy.push({ ...p, qty: 1 });
     setCart(copy);
-    if (GLOBAL_LOG_LEVEL === 'info') console.log('[INFO] addToCart', p.name);
+    
+    // Usar el sistema de logging centralizado
+    logCartOperation('add', p.name, { productId: p.id, price: p.price });
+    
     recalc(copy, isPremium, coupon, region);
   }
 
@@ -44,35 +47,27 @@ export default function App() {
   }
 
   function recalc(cartArg, premiumArg, couponArg, regionArg) {
-    // subtotal
-    let subtotal = 0;
-    for (const item of cartArg) {
-      subtotal += (item.price || 0) * (item.qty || 0);
+    // Usar la función orquestadora del dominio
+    const calculation = calcTotalNumber(cartArg, premiumArg, couponArg, regionArg);
+    
+    // Actualizar la visualización del total
+    setTotalDisplay(formatCurrency(calculation.finalTotal));
+    
+    // Log detallado de información adicional para mantener compatibilidad
+    if (calculation.premiumDiscount.applied) {
+      logInfo('Premium -5%');
     }
-    // premium 5%
-    if (premiumArg) {
-      subtotal = subtotal - subtotal * 0.05;
-      console.log('[INFO] Premium -5%');
+    
+    if (calculation.couponDiscount.applied) {
+      if (couponArg === 'PROMO10') {
+        logInfo('Cupón PROMO10 -10%');
+      } else if (couponArg === 'FIJO20') {
+        logInfo('Cupón FIJO20 -$20');
+      }
     }
-    // cupón
-    if (couponArg === 'PROMO10' && subtotal >= 50) {
-      subtotal = subtotal * 0.90;
-      console.log('[INFO] Cupón PROMO10 -10%');
-    } else if (couponArg === 'FIJO20' && subtotal >= 50) {
-      subtotal = subtotal - 20;
-      console.log('[INFO] Cupón FIJO20 -$20');
-    }
-    // impuesto por región
-    let taxRate = 0.10;
-    if (regionArg === 'CR') taxRate = 0.13;
-    else if (regionArg === 'US-CA') taxRate = 0.0725;
-    else if (regionArg === 'US-TX') taxRate = 0.0625;
-    const taxes = subtotal * taxRate;
-    let total = subtotal + taxes;
-
-    total = Math.round(total * 100) / 100;
-    setTotalDisplay(formatCurrency(total));
-    console.log(`[INFO] Subtotal=${formatCurrency(subtotal)} Taxes=${formatCurrency(taxes)} Total=${formatCurrency(total)}`);
+    
+    // Log del resumen final
+    logInfo(`Subtotal=${formatCurrency(calculation.subtotal)} Taxes=${formatCurrency(calculation.taxes.taxAmount)} Total=${formatCurrency(calculation.finalTotal)}`);
   }
 
   function handlePremium(e) {
