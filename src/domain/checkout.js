@@ -13,6 +13,7 @@
 
 import { roundMoney, isValidMoneyValue } from '../utils/money.js';
 import { logFinancialCalculation, logWarn } from '../utils/log.js';
+import { defaultTaxPolicy } from './taxPolicies.js';
 
 /**
  * Configuración de cupones disponibles en el sistema
@@ -31,17 +32,6 @@ export const COUPON_CONFIG = {
     minAmount: 50,
     description: 'Descuento fijo de $20 con compra mínima de $50'
   }
-};
-
-/**
- * Configuración de tasas de impuestos por región
- * @readonly
- */
-export const TAX_RATES = {
-  'CR': 0.13,        // Costa Rica - 13%
-  'US-CA': 0.0725,   // California - 7.25%
-  'US-TX': 0.0625,   // Texas - 6.25%
-  'OTRA': 0.10       // Otras regiones - 10%
 };
 
 /**
@@ -266,97 +256,145 @@ export function applyCoupons(subtotal, couponCode) {
 }
 
 /**
- * Calcula los impuestos según la región especificada
+ * Calcula los impuestos usando la política de impuestos inyectada
  * 
- * Función pura que calcula impuestos basados en las tasas configuradas
- * para cada región. Maneja regiones no reconocidas con una tasa por defecto.
+ * CAMBIO IMPLEMENTADO: Inyección de dependencias para políticas de impuestos
+ * 
+ * Justificación del cambio:
+ * - FLEXIBILIDAD: Permite diferentes estrategias de cálculo de impuestos
+ * - EXTENSIBILIDAD: Fácil adición de nuevas políticas sin modificar código existente
+ * - TESTABILIDAD: Permite mockear políticas para pruebas unitarias
+ * - SEPARACIÓN DE RESPONSABILIDADES: La lógica de impuestos está en políticas independientes
+ * - CUMPLIMIENTO NORMATIVO: Diferentes países/clientes pueden tener reglas tributarias distintas
+ * 
+ * Ejemplos de uso:
+ * - Política regional: Tasas fijas por país (CR: 13%, US-CA: 7.25%)
+ * - Política progresiva: Tasas que aumentan con el monto
+ * - Política premium: Tasas reducidas para clientes VIP
+ * - Política exenta: Sin impuestos para productos específicos
  * 
  * @param {number} subtotal - Subtotal sobre el cual calcular impuestos
- * @param {string} region - Código de región para determinar la tasa de impuestos
+ * @param {string} region - Código de región para contexto
+ * @param {Object} taxPolicy - Política de impuestos inyectada (implementa calculateTax)
+ * @param {Object} additionalContext - Contexto adicional para la política
  * @returns {Object} Objeto con información detallada de los impuestos
- * @returns {number} returns.taxAmount - Cantidad de impuestos calculada
- * @returns {number} returns.taxRate - Tasa de impuestos aplicada
- * @returns {string} returns.region - Región utilizada para el cálculo
- * @returns {number} returns.totalWithTax - Subtotal más impuestos
  * 
  * @example
+ * // Usando política regional por defecto
  * computeTaxes(100, 'CR');
- * // { taxAmount: 13, taxRate: 0.13, region: 'CR', totalWithTax: 113 }
  * 
- * computeTaxes(100, 'UNKNOWN');
- * // { taxAmount: 10, taxRate: 0.10, region: 'OTRA', totalWithTax: 110 }
+ * // Usando política progresiva inyectada
+ * const progressivePolicy = new ProgressiveTaxPolicy();
+ * computeTaxes(100, 'US', progressivePolicy);
+ * 
+ * // Usando política premium con contexto adicional
+ * const premiumPolicy = new PremiumClientTaxPolicy();
+ * computeTaxes(100, 'CR', premiumPolicy, { isPremium: true });
  */
-export function computeTaxes(subtotal, region) {
+export function computeTaxes(subtotal, region, taxPolicy = defaultTaxPolicy, additionalContext = {}) {
   // Validación de entrada
   if (!isValidMoneyValue(subtotal)) {
     logWarn('computeTaxes: subtotal inválido', { subtotal });
     return { 
       taxAmount: 0, 
       taxRate: 0, 
-      region: 'UNKNOWN', 
-      totalWithTax: 0 
+      region: 'ERROR', 
+      totalWithTax: 0,
+      policyName: taxPolicy?.name || 'Unknown'
     };
   }
   
-  // Normalizar región
-  const normalizedRegion = String(region || '').trim().toUpperCase();
-  
-  // Obtener tasa de impuestos (usar 'OTRA' como fallback)
-  const taxRate = TAX_RATES[normalizedRegion] || TAX_RATES['OTRA'];
-  const effectiveRegion = TAX_RATES[normalizedRegion] ? normalizedRegion : 'OTRA';
-  
-  if (effectiveRegion === 'OTRA' && normalizedRegion !== 'OTRA') {
-    logWarn('computeTaxes: región no reconocida, usando tasa por defecto', { 
-      requestedRegion: normalizedRegion,
-      effectiveRegion,
-      taxRate 
+  // Validación de la política de impuestos
+  if (!taxPolicy || typeof taxPolicy.calculateTax !== 'function') {
+    logWarn('computeTaxes: política de impuestos inválida, usando política por defecto', { 
+      taxPolicy: taxPolicy?.name || 'undefined'
     });
+    taxPolicy = defaultTaxPolicy;
   }
   
-  const taxAmount = roundMoney(subtotal * taxRate);
-  const totalWithTax = roundMoney(subtotal + taxAmount);
-  
-  logFinancialCalculation('Tax Calculation', {
-    subtotal,
-    region: effectiveRegion,
-    taxRate,
-    taxAmount,
-    totalWithTax
-  });
-  
-  return {
-    taxAmount,
-    taxRate,
-    region: effectiveRegion,
-    totalWithTax
+  // Preparar contexto para la política
+  const context = {
+    region: String(region || '').trim().toUpperCase(),
+    ...additionalContext
   };
+  
+  try {
+    // Delegar el cálculo a la política inyectada
+    const result = taxPolicy.calculateTax(subtotal, context);
+    
+    // Log del cálculo con información de la política utilizada
+    logFinancialCalculation('Tax Calculation with Policy', {
+      policyName: taxPolicy.name,
+      subtotal,
+      context,
+      result: {
+        taxAmount: result.taxAmount,
+        taxRate: result.taxRate,
+        totalWithTax: result.totalWithTax
+      }
+    });
+    
+    return result;
+    
+  } catch (error) {
+    logWarn('computeTaxes: Error en cálculo de impuestos', { 
+      error: error.message, 
+      policyName: taxPolicy.name,
+      subtotal,
+      context
+    });
+    
+    // Retorno seguro en caso de error
+    return {
+      taxAmount: 0,
+      taxRate: 0,
+      region: 'ERROR',
+      totalWithTax: subtotal,
+      policyName: taxPolicy.name || 'Unknown',
+      error: error.message
+    };
+  }
 }
 
 /**
- * Función orquestadora que coordina todos los cálculos del checkout
+ * Función orquestadora que coordina todos los cálculos del checkout con DI
+ * 
+ * CAMBIO IMPLEMENTADO: Soporte para inyección de política de impuestos
  * 
  * Esta función coordina la ejecución de todos los cálculos necesarios
  * para obtener el total final del carrito, aplicando descuentos, cupones
- * e impuestos en el orden correcto.
+ * e impuestos en el orden correcto. Ahora soporta políticas de impuestos
+ * inyectadas para mayor flexibilidad.
+ * 
+ * Justificación del cambio:
+ * - Permite usar diferentes políticas de impuestos según el contexto
+ * - Mantiene compatibilidad total con código existente (taxPolicy opcional)
+ * - Facilita testing con políticas mock
+ * - Soporta contextos adicionales para políticas complejas
  * 
  * @param {Array<Object>} cartItems - Items del carrito
  * @param {boolean} isPremium - Si el usuario es premium
  * @param {string} couponCode - Código del cupón a aplicar
  * @param {string} region - Región para cálculo de impuestos
+ * @param {Object} taxPolicy - Política de impuestos inyectada (opcional)
+ * @param {Object} taxContext - Contexto adicional para la política de impuestos (opcional)
  * @returns {Object} Objeto con todos los detalles del cálculo
  * 
  * @example
+ * // Uso estándar (mantiene compatibilidad)
  * const cart = [{ price: 30, qty: 2 }];
  * const result = calcTotalNumber(cart, true, 'PROMO10', 'CR');
- * // {
- * //   subtotal: 60,
- * //   premiumDiscount: { applied: true, discountAmount: 3, newSubtotal: 57 },
- * //   couponDiscount: { applied: true, discountAmount: 5.7, newSubtotal: 51.3 },
- * //   taxes: { taxAmount: 6.67, taxRate: 0.13, region: 'CR', totalWithTax: 57.97 },
- * //   finalTotal: 57.97
- * // }
+ * 
+ * // Uso con política de impuestos inyectada
+ * const progressivePolicy = new ProgressiveTaxPolicy();
+ * const result = calcTotalNumber(cart, true, 'PROMO10', 'US', progressivePolicy);
+ * 
+ * // Uso con política premium y contexto
+ * const premiumPolicy = new PremiumClientTaxPolicy();
+ * const context = { isPremium: true, clientType: 'VIP' };
+ * const result = calcTotalNumber(cart, true, '', 'CR', premiumPolicy, context);
  */
-export function calcTotalNumber(cartItems, isPremium, couponCode, region) {
+export function calcTotalNumber(cartItems, isPremium, couponCode, region, taxPolicy = defaultTaxPolicy, taxContext = {}) {
   try {
     // Paso 1: Calcular subtotal inicial
     const subtotal = computeSubtotal(cartItems);
@@ -367,8 +405,15 @@ export function calcTotalNumber(cartItems, isPremium, couponCode, region) {
     // Paso 3: Aplicar cupón sobre el subtotal con descuento premium
     const couponDiscount = applyCoupons(premiumDiscount.newSubtotal, couponCode);
     
-    // Paso 4: Calcular impuestos sobre el subtotal final (después de todos los descuentos)
-    const taxes = computeTaxes(couponDiscount.newSubtotal, region);
+    // Paso 4: Calcular impuestos usando la política inyectada
+    // Combinar contexto adicional con información del usuario premium
+    const combinedTaxContext = {
+      isPremium,
+      couponCode,
+      ...taxContext
+    };
+    
+    const taxes = computeTaxes(couponDiscount.newSubtotal, region, taxPolicy, combinedTaxContext);
     
     // Total final
     const finalTotal = taxes.totalWithTax;
@@ -378,23 +423,37 @@ export function calcTotalNumber(cartItems, isPremium, couponCode, region) {
       premiumDiscount,
       couponDiscount,
       taxes,
-      finalTotal: roundMoney(finalTotal)
+      finalTotal: roundMoney(finalTotal),
+      // Información adicional sobre la política utilizada
+      taxPolicyUsed: {
+        name: taxPolicy?.name || 'Unknown',
+        description: taxPolicy?.description || 'No description'
+      }
     };
     
-    logFinancialCalculation('Final Total Calculation', {
+    logFinancialCalculation('Final Total Calculation with Tax Policy', {
+      taxPolicy: result.taxPolicyUsed,
       steps: {
         initialSubtotal: subtotal,
         afterPremium: premiumDiscount.newSubtotal,
         afterCoupon: couponDiscount.newSubtotal,
         taxes: taxes.taxAmount,
         finalTotal: result.finalTotal
-      }
+      },
+      context: combinedTaxContext
     });
     
     return result;
     
   } catch (error) {
-    logWarn('calcTotalNumber: Error en cálculo', { error: error.message, cartItems, isPremium, couponCode, region });
+    logWarn('calcTotalNumber: Error en cálculo', { 
+      error: error.message, 
+      cartItems, 
+      isPremium, 
+      couponCode, 
+      region,
+      taxPolicy: taxPolicy?.name
+    });
     
     // Retorno seguro en caso de error
     return {
@@ -402,7 +461,8 @@ export function calcTotalNumber(cartItems, isPremium, couponCode, region) {
       premiumDiscount: { newSubtotal: 0, discountAmount: 0, applied: false },
       couponDiscount: { newSubtotal: 0, discountAmount: 0, applied: false, reason: 'Error en cálculo' },
       taxes: { taxAmount: 0, taxRate: 0, region: 'ERROR', totalWithTax: 0 },
-      finalTotal: 0
+      finalTotal: 0,
+      taxPolicyUsed: { name: 'Error', description: 'Error en cálculo' }
     };
   }
 }
