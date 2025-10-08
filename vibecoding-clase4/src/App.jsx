@@ -3,6 +3,9 @@ import { formatMoney } from './utils/money';
 import { logInfo, logError, logWarn } from './utils/log';
 import { calcTotalNumber } from './domain/calculations';
 import taxPolicies from './domain/policies/taxPolicy';
+import ProductList from './components/ProductList';
+import Cart from './components/Cart';
+import Checkout from './components/Checkout';
 
 let GLOBAL_LOG_LEVEL = 'info';
 
@@ -35,7 +38,7 @@ export default function App() {
     if (idx >= 0) copy[idx].qty += 1;
     else copy.push({ ...p, qty: 1 });
     setCart(copy);
-  if (GLOBAL_LOG_LEVEL === 'info') logInfo('addToCart', p.name);
+    if (GLOBAL_LOG_LEVEL === 'info') logInfo('addToCart', p.name);
     recalc(copy, isPremium, coupon, region);
   }
 
@@ -81,60 +84,20 @@ export default function App() {
       <h1>Tienda (versión mala, lista para refactor)</h1>
 
       <div style={{ display: 'flex', gap: 24 }}>
-        <section>
-          <h2>Productos</h2>
-          {products.map(p => (
-            <div key={p.id} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-              <span>{p.name} — {formatMoney(p.price)}</span>
-              <button onClick={() => addToCart(p)}>Agregar</button>
-            </div>
-          ))}
-        </section>
+        <ProductList products={products} onAdd={addToCart} />
 
-        <section>
-          <h2>Carrito</h2>
-          {cart.length === 0 && <p>(vacío)</p>}
-          {cart.map(item => (
-            <div key={item.id} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-              <span>{item.name}</span>
-              <input
-                type="number"
-                min={0}
-                value={item.qty}
-                onChange={e => changeQty(item.id, Number(e.target.value))}
-                style={{ width: 60 }}
-              />
-              <span>@ {formatMoney(item.price)}</span>
-            </div>
-          ))}
-        </section>
+        <Cart items={cart} onChangeQty={changeQty} />
 
-        <section>
-          <h2>Checkout</h2>
-          <label>
-            <input type="checkbox" checked={isPremium} onChange={handlePremium} />
-            Usuario Premium (5%)
-          </label>
-          <div style={{ marginTop: 8 }}>
-            <label> Cupón: </label>
-            <select value={coupon} onChange={handleCoupon}>
-              <option value="">(ninguno)</option>
-              <option value="PROMO10">PROMO10 (-10% min 50)</option>
-              <option value="FIJO20">FIJO20 (-$20 min 50)</option>
-            </select>
-          </div>
-          <div style={{ marginTop: 8 }}>
-            <label>Región: </label>
-            <select value={region} onChange={handleRegion}>
-              <option value="CR">CR (13%)</option>
-              <option value="US-CA">US-CA (7.25%)</option>
-              <option value="US-TX">US-TX (6.25%)</option>
-              <option value="OTRA">OTRA (10%)</option>
-            </select>
-          </div>
-
-          <h3 style={{ marginTop: 16 }}>Total: {totalDisplay}</h3>
-        </section>
+        <Checkout
+          isPremium={isPremium}
+          onTogglePremium={handlePremium}
+          coupon={coupon}
+          onChangeCoupon={handleCoupon}
+          region={region}
+          onChangeRegion={handleRegion}
+          totalDisplay={totalDisplay}
+          onConfirm={() => logInfo('Compra confirmada')}
+        />
       </div>
     </div>
   );
