@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { formatMoney } from './utils/money';
 import { logInfo, logError, logWarn } from './utils/log';
 import { calcTotalNumber } from './domain/calculations';
+import taxPolicies from './domain/policies/taxPolicy';
 
 let GLOBAL_LOG_LEVEL = 'info';
 
@@ -45,13 +46,13 @@ export default function App() {
   }
 
   function recalc(cartArg, premiumArg, couponArg, regionArg) {
-    // mapear region a taxRate
-    let taxRate = 0.10;
-    if (regionArg === 'CR') taxRate = 0.13;
-    else if (regionArg === 'US-CA') taxRate = 0.0725;
-    else if (regionArg === 'US-TX') taxRate = 0.0625;
+  // mapear region a taxPolicy
+  let policy = taxPolicies.DEFAULT;
+  if (regionArg === 'CR') policy = taxPolicies.CR;
+  else if (regionArg === 'US-CA' || regionArg === 'US-TX' || regionArg === 'US') policy = taxPolicies.US;
+  else if (regionArg === 'MX') policy = taxPolicies.MX;
 
-    const result = calcTotalNumber(cartArg, premiumArg, couponArg, taxRate);
+  const result = calcTotalNumber(cartArg, premiumArg, couponArg, policy);
 
     // mantener logs en la capa de presentación
     if (result.userDiscountApplied) logInfo('Premium -5%');

@@ -35,11 +35,11 @@ export function computeTaxes(amount, taxRate) {
 // Orquestador: devuelve un objeto con desglose y total.
 // Nota: devolvemos más información (subtotal después de descuentos, impuestos, total y flags)
 // para que la capa de presentación pueda mostrar/loggear sin duplicar lógica.
-export function calcTotalNumber(items, user, coupon, taxRate) {
+export function calcTotalNumber(items, user, coupon, taxPolicy) {
   const rawSubtotal = computeSubtotal(items);
   const afterUser = applyUserDiscounts(rawSubtotal, user);
   const afterCoupon = applyCoupons(afterUser, coupon);
-  const taxes = computeTaxes(afterCoupon, taxRate);
+  const taxes = computeTaxes(afterCoupon, taxPolicy?.rate ?? 0);
   const total = Math.round((afterCoupon + taxes) * 100) / 100;
 
   const userDiscountApplied = afterUser !== rawSubtotal;
@@ -53,5 +53,6 @@ export function calcTotalNumber(items, user, coupon, taxRate) {
     couponApplied,
     rawSubtotal,
     afterUser,
+    taxPolicyId: taxPolicy?.id ?? null,
   };
 }
