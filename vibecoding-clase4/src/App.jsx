@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { formatMoney } from './utils/money';
+import { logInfo, logError, logWarn } from './utils/log';
 
 let GLOBAL_LOG_LEVEL = 'info';
 
@@ -11,9 +13,7 @@ async function fetchProducts() {
   ];
 }
 
-function formatCurrency(n) {
-  return `$${n.toFixed(2)}`;
-}
+// ahora usamos formatMoney desde src/utils/money.js
 
 export default function App() {
   const [products, setProducts] = useState([]);
@@ -21,7 +21,7 @@ export default function App() {
   const [region, setRegion] = useState('CR');
   const [coupon, setCoupon] = useState('');
   const [isPremium, setIsPremium] = useState(true);
-  const [totalDisplay, setTotalDisplay] = useState('$0.00');
+  const [totalDisplay, setTotalDisplay] = useState(formatMoney(0));
 
   useEffect(() => {
     fetchProducts().then(setProducts);
@@ -33,7 +33,7 @@ export default function App() {
     if (idx >= 0) copy[idx].qty += 1;
     else copy.push({ ...p, qty: 1 });
     setCart(copy);
-    if (GLOBAL_LOG_LEVEL === 'info') console.log('[INFO] addToCart', p.name);
+  if (GLOBAL_LOG_LEVEL === 'info') logInfo('addToCart', p.name);
     recalc(copy, isPremium, coupon, region);
   }
 
@@ -52,15 +52,15 @@ export default function App() {
     // premium 5%
     if (premiumArg) {
       subtotal = subtotal - subtotal * 0.05;
-      console.log('[INFO] Premium -5%');
+      logInfo('Premium -5%');
     }
     // cupón
     if (couponArg === 'PROMO10' && subtotal >= 50) {
       subtotal = subtotal * 0.90;
-      console.log('[INFO] Cupón PROMO10 -10%');
+      logInfo('Cupón PROMO10 -10%');
     } else if (couponArg === 'FIJO20' && subtotal >= 50) {
       subtotal = subtotal - 20;
-      console.log('[INFO] Cupón FIJO20 -$20');
+      logInfo('Cupón FIJO20 -$20');
     }
     // impuesto por región
     let taxRate = 0.10;
@@ -70,9 +70,9 @@ export default function App() {
     const taxes = subtotal * taxRate;
     let total = subtotal + taxes;
 
-    total = Math.round(total * 100) / 100;
-    setTotalDisplay(formatCurrency(total));
-    console.log(`[INFO] Subtotal=${formatCurrency(subtotal)} Taxes=${formatCurrency(taxes)} Total=${formatCurrency(total)}`);
+  total = Math.round(total * 100) / 100;
+  setTotalDisplay(formatMoney(total));
+  logInfo(`Subtotal=${formatMoney(subtotal)} Taxes=${formatMoney(taxes)} Total=${formatMoney(total)}`);
   }
 
   function handlePremium(e) {
@@ -97,7 +97,7 @@ export default function App() {
           <h2>Productos</h2>
           {products.map(p => (
             <div key={p.id} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-              <span>{p.name} — {formatCurrency(p.price)}</span>
+              <span>{p.name} — {formatMoney(p.price)}</span>
               <button onClick={() => addToCart(p)}>Agregar</button>
             </div>
           ))}
@@ -116,7 +116,7 @@ export default function App() {
                 onChange={e => changeQty(item.id, Number(e.target.value))}
                 style={{ width: 60 }}
               />
-              <span>@ {formatCurrency(item.price)}</span>
+              <span>@ {formatMoney(item.price)}</span>
             </div>
           ))}
         </section>
