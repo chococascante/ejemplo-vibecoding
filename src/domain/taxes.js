@@ -1,8 +1,13 @@
 // src/domain/taxes.js
+
+const TaxStrategy = {
+  'CR': (subtotal) => subtotal * 0.13,
+  'US-CA': (subtotal) => subtotal * 0.0725,
+  'US-TX': (subtotal) => subtotal * 0.0625,
+  'DEFAULT': (subtotal) => subtotal * 0.10
+};
+
 export function computeTaxes(subtotal, regionArg) {
-  let taxRate = 0.10;
-  if (regionArg === 'CR') taxRate = 0.13;
-  else if (regionArg === 'US-CA') taxRate = 0.0725;
-  else if (regionArg === 'US-TX') taxRate = 0.0625;
-  return subtotal * taxRate;
+  const strategy = TaxStrategy[regionArg] || TaxStrategy['DEFAULT'];
+  return strategy(subtotal);
 }

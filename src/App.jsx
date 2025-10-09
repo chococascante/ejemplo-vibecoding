@@ -5,10 +5,14 @@ import { useEffect, useState } from "react";
 
 import formatCurrency from "./utils/money";
 import { GLOBAL_LOG_LEVEL, logInfo } from "./utils/log";
+
 import { computeSubTotal } from "./domain/subtotal";
 import { applyUserDiscounts } from "./domain/discounts";
 import { applyCoupons } from "./domain/coupons";
 import { computeTaxes } from "./domain/taxes";
+import ProductList from "./ui/ProductList";
+import Cart from "./ui/Cart";
+import Checkout from "./ui/Checkout";
 
 
 
@@ -85,62 +89,18 @@ export default function App() {
   return (
     <div style={{ padding: 16, fontFamily: 'system-ui' }}>
       <h1>Tienda</h1>
-
       <div style={{ display: 'flex', gap: 24 }}>
-        <section>
-          <h2>Productos</h2>
-          {products.map(p => (
-            <div key={p.id} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-              <span>{p.name} — {formatCurrency(p.price)}</span>
-              <button onClick={() => addToCart(p)}>Agregar</button>
-            </div>
-          ))}
-        </section>
-
-        <section>
-          <h2>Carrito</h2>
-          {cart.length === 0 && <p>(vacío)</p>}
-          {cart.map(item => (
-            <div key={item.id} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-              <span>{item.name}</span>
-              <input
-                type="number"
-                min={0}
-                value={item.qty}
-                onChange={e => changeQty(item.id, Number(e.target.value))}
-                style={{ width: 60 }}
-              />
-              <span>@ {formatCurrency(item.price)}</span>
-            </div>
-          ))}
-        </section>
-
-        <section>
-          <h2>Checkout</h2>
-          <label>
-            <input type="checkbox" checked={isPremium} onChange={handlePremium} />
-            Usuario Premium (5%)
-          </label>
-          <div style={{ marginTop: 8 }}>
-            <label> Cupón: </label>
-            <select value={coupon} onChange={handleCoupon}>
-              <option value="">(ninguno)</option>
-              <option value="PROMO10">PROMO10 (-10% min 50)</option>
-              <option value="FIJO20">FIJO20 (-$20 min 50)</option>
-            </select>
-          </div>
-          <div style={{ marginTop: 8 }}>
-            <label>Región: </label>
-            <select value={region} onChange={handleRegion}>
-              <option value="CR">CR (13%)</option>
-              <option value="US-CA">US-CA (7.25%)</option>
-              <option value="US-TX">US-TX (6.25%)</option>
-              <option value="OTRA">OTRA (10%)</option>
-            </select>
-          </div>
-
-          <h3 style={{ marginTop: 16 }}>Total: {totalDisplay}</h3>
-        </section>
+        <ProductList products={products} onAddToCart={addToCart} />
+        <Cart cart={cart} onChangeQty={changeQty} />
+        <Checkout
+          isPremium={isPremium}
+          onPremiumChange={handlePremium}
+          coupon={coupon}
+          onCouponChange={handleCoupon}
+          region={region}
+          onRegionChange={handleRegion}
+          totalDisplay={totalDisplay}
+        />
       </div>
     </div>
   );
