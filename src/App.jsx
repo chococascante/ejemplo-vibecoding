@@ -1,19 +1,13 @@
 import { useEffect, useState } from "react";
+import { formatCurrency } from './utils/money';
+import { info as logInfo, setLevel as setLogLevel } from './utils/log';
+import { calcTotalNumber } from './domain/pricing';
+import ProductList from './components/ProductList';
+import Cart from './components/Cart';
+import Checkout from './components/Checkout';
+import { fetchProducts } from './services/catalog';
 
-let GLOBAL_LOG_LEVEL = 'info';
-
-// Simula "API"
-async function fetchProducts() {
-  return [
-    { id: 1, name: 'Mouse', price: 20 },
-    { id: 2, name: 'Teclado', price: 35 },
-    { id: 3, name: 'Monitor', price: 150 },
-  ];
-}
-
-function formatCurrency(n) {
-  return `$${n.toFixed(2)}`;
-}
+// formatCurrency moved to src/utils/money.js
 
 export default function App() {
   const [products, setProducts] = useState([]);
@@ -23,8 +17,29 @@ export default function App() {
   const [isPremium, setIsPremium] = useState(true);
   const [totalDisplay, setTotalDisplay] = useState('$0.00');
 
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState(null);
+
   useEffect(() => {
-    fetchProducts().then(setProducts);
+    let mounted = true;
+    setLoading(true);
+    setLoadError(null);
+    fetchProducts()
+      .then((list) => {
+        if (!mounted) return;
+        setProducts(list);
+      })
+      .catch((err) => {
+        if (!mounted) return;
+        setLoadError(err?.message || 'Error');
+      })
+      .finally(() => {
+        if (!mounted) return;
+        setLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   function addToCart(p) {
@@ -33,7 +48,7 @@ export default function App() {
     if (idx >= 0) copy[idx].qty += 1;
     else copy.push({ ...p, qty: 1 });
     setCart(copy);
-    if (GLOBAL_LOG_LEVEL === 'info') console.log('[INFO] addToCart', p.name);
+    logInfo('[INFO] addToCart', p.name);
     recalc(copy, isPremium, coupon, region);
   }
 
@@ -44,35 +59,14 @@ export default function App() {
   }
 
   function recalc(cartArg, premiumArg, couponArg, regionArg) {
-    // subtotal
-    let subtotal = 0;
-    for (const item of cartArg) {
-      subtotal += (item.price || 0) * (item.qty || 0);
-    }
-    // premium 5%
-    if (premiumArg) {
-      subtotal = subtotal - subtotal * 0.05;
-      console.log('[INFO] Premium -5%');
-    }
-    // cupón
-    if (couponArg === 'PROMO10' && subtotal >= 50) {
-      subtotal = subtotal * 0.90;
-      console.log('[INFO] Cupón PROMO10 -10%');
-    } else if (couponArg === 'FIJO20' && subtotal >= 50) {
-      subtotal = subtotal - 20;
-      console.log('[INFO] Cupón FIJO20 -$20');
-    }
-    // impuesto por región
-    let taxRate = 0.10;
-    if (regionArg === 'CR') taxRate = 0.13;
-    else if (regionArg === 'US-CA') taxRate = 0.0725;
-    else if (regionArg === 'US-TX') taxRate = 0.0625;
-    const taxes = subtotal * taxRate;
-    let total = subtotal + taxes;
+    const result = calcTotalNumber(cartArg, premiumArg, couponArg, regionArg);
 
-    total = Math.round(total * 100) / 100;
-    setTotalDisplay(formatCurrency(total));
-    console.log(`[INFO] Subtotal=${formatCurrency(subtotal)} Taxes=${formatCurrency(taxes)} Total=${formatCurrency(total)}`);
+    if (result.appliedPremium) logInfo('[INFO] Premium -5%');
+    if (result.appliedCoupon === 'PROMO10') logInfo('[INFO] Cupón PROMO10 -10%');
+    else if (result.appliedCoupon === 'FIJO20') logInfo('[INFO] Cupón FIJO20 -$20');
+
+    setTotalDisplay(formatCurrency(result.total));
+    logInfo(`[INFO] Subtotal=${formatCurrency(result.subtotalAfterDiscounts)} Taxes=${formatCurrency(result.taxes)} Total=${formatCurrency(result.total)}`);
   }
 
   function handlePremium(e) {
@@ -93,60 +87,24 @@ export default function App() {
       <h1>Tienda</h1>
 
       <div style={{ display: 'flex', gap: 24 }}>
-        <section>
-          <h2>Productos</h2>
-          {products.map(p => (
-            <div key={p.id} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-              <span>{p.name} — {formatCurrency(p.price)}</span>
-              <button onClick={() => addToCart(p)}>Agregar</button>
-            </div>
-          ))}
-        </section>
+        {loading ? (
+          <div>Cargando...</div>
+        ) : loadError ? (
+          <div>Error</div>
+        ) : (
+          <ProductList products={products} onAdd={addToCart} />
+        )}
 
-        <section>
-          <h2>Carrito</h2>
-          {cart.length === 0 && <p>(vacío)</p>}
-          {cart.map(item => (
-            <div key={item.id} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-              <span>{item.name}</span>
-              <input
-                type="number"
-                min={0}
-                value={item.qty}
-                onChange={e => changeQty(item.id, Number(e.target.value))}
-                style={{ width: 60 }}
-              />
-              <span>@ {formatCurrency(item.price)}</span>
-            </div>
-          ))}
-        </section>
-
-        <section>
-          <h2>Checkout</h2>
-          <label>
-            <input type="checkbox" checked={isPremium} onChange={handlePremium} />
-            Usuario Premium (5%)
-          </label>
-          <div style={{ marginTop: 8 }}>
-            <label> Cupón: </label>
-            <select value={coupon} onChange={handleCoupon}>
-              <option value="">(ninguno)</option>
-              <option value="PROMO10">PROMO10 (-10% min 50)</option>
-              <option value="FIJO20">FIJO20 (-$20 min 50)</option>
-            </select>
-          </div>
-          <div style={{ marginTop: 8 }}>
-            <label>Región: </label>
-            <select value={region} onChange={handleRegion}>
-              <option value="CR">CR (13%)</option>
-              <option value="US-CA">US-CA (7.25%)</option>
-              <option value="US-TX">US-TX (6.25%)</option>
-              <option value="OTRA">OTRA (10%)</option>
-            </select>
-          </div>
-
-          <h3 style={{ marginTop: 16 }}>Total: {totalDisplay}</h3>
-        </section>
+        <Cart cart={cart} onChangeQty={changeQty} />
+        <Checkout
+          isPremium={isPremium}
+          onPremiumChange={handlePremium}
+          coupon={coupon}
+          onCouponChange={handleCoupon}
+          region={region}
+          onRegionChange={handleRegion}
+          totalDisplay={totalDisplay}
+        />
       </div>
     </div>
   );
