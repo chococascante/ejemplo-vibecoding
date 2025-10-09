@@ -26,7 +26,7 @@ import {
   isErrorState,
   isSuccessState,
   formatCatalogError 
-} from './src/services/catalog.js';
+} from '../src/services/catalog.js';
 
 console.log('🎯 RETO C - Demostración del Servicio de Catálogo');
 console.log('=' .repeat(55));

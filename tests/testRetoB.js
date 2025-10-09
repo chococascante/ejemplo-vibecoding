@@ -15,8 +15,8 @@
  * 6. ✅ Integración completa con calcTotalNumber
  */
 
-import { applyCoupons, calcTotalNumber } from './src/domain/checkout.js';
-import { defaultTaxPolicy } from './src/domain/taxPolicies.js';
+import { applyCoupons, calcTotalNumber } from '../src/domain/checkout.js';
+import { defaultTaxPolicy } from '../src/domain/taxPolicies.js';
 
 console.log('🧪 RETO B - Pruebas unitarias del cupón BOGO_HALF');
 console.log('=' .repeat(55));

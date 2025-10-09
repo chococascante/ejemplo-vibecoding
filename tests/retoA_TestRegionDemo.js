@@ -18,10 +18,10 @@
  */
 
 // Importar las funciones y políticas necesarias
-import { calcTotalNumber } from './src/domain/checkout.js';
-import { TestRegionTaxPolicy, RegionalTaxPolicy } from './src/domain/taxPolicies.js';
-import { formatCurrency } from './src/utils/money.js';
-import { setLogLevel, LOG_LEVELS, logInfo } from './src/utils/log.js';
+import { calcTotalNumber } from '../src/domain/checkout.js';
+import { TestRegionTaxPolicy, RegionalTaxPolicy } from '../src/domain/taxPolicies.js';
+import { formatCurrency } from '../src/utils/money.js';
+import { setLogLevel, LOG_LEVELS, logInfo } from '../src/utils/log.js';
 
 // Configurar logging para la demostración
 setLogLevel(LOG_LEVELS.INFO);
@@ -226,7 +226,7 @@ console.log('🚀 Política TestRegionTaxPolicy lista para producción');
  * Para usar la nueva política en tu aplicación:
  * 
  * 1. Importar la política:
- *    import { TestRegionTaxPolicy } from './src/domain/taxPolicies.js';
+ *    import { TestRegionTaxPolicy } from '../src/domain/taxPolicies.js';
  * 
  * 2. Crear instancia:
  *    const testPolicy = new TestRegionTaxPolicy();

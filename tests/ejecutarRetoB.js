@@ -12,8 +12,8 @@
  * - Descuento aplicado: $10
  */
 
-import { calcTotalNumber } from './src/domain/checkout.js';
-import { defaultTaxPolicy } from './src/domain/taxPolicies.js';
+import { calcTotalNumber } from '../src/domain/checkout.js';
+import { defaultTaxPolicy } from '../src/domain/taxPolicies.js';
 
 console.log('🎯 RETO B - Demostración del cupón BOGO_HALF');
 console.log('=' .repeat(50));

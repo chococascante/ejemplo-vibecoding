@@ -3,7 +3,7 @@
  * Verificación rápida y directa
  */
 
-import { TestRegionTaxPolicy } from './src/domain/taxPolicies.js';
+import { TestRegionTaxPolicy } from '../src/domain/taxPolicies.js';
 
 console.log('🧪 PRUEBAS RÁPIDAS DEL RETO A');
 console.log('=' .repeat(40));

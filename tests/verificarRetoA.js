@@ -10,8 +10,8 @@
  * @date 9 de octubre, 2025
  */
 
-import { TestRegionTaxPolicy } from './src/domain/taxPolicies.js';
-import { calcTotalNumber } from './src/domain/checkout.js';
+import { TestRegionTaxPolicy } from '../src/domain/taxPolicies.js';
+import { calcTotalNumber } from '../src/domain/checkout.js';
 
 console.log('🧪 VERIFICACIÓN DEL RETO A - TestRegionTaxPolicy');
 console.log('=' .repeat(60));

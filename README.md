@@ -81,15 +81,25 @@ src/
     └── log.js                 (Sistema de logging)
 
 tests/
-└── smokeTests.js              (20 pruebas unitarias - 100% éxito)
-
-Archivos de demostración:
+├── README.md                  (Documentación de pruebas)
+├── smokeTests.js              (20 pruebas unitarias - 100% éxito)
+├── verificarRetoA.js          (Verificación completa RETO A)
+├── testRapidoRetoA.js         (Tests rápidos RETO A)
+├── testRetoA.js               (Tests detallados RETO A)
+├── testRetoB.js               (Tests del cupón BOGO_HALF)
 ├── ejecutarRetoA.js           (Demo RETO A)
 ├── ejecutarRetoB.js           (Demo RETO B)
 ├── ejecutarRetoC.js           (Demo RETO C)
-├── verificarRetoA.js          (Verificación completa RETO A)
-├── testRapidoRetoA.js         (Tests rápidos RETO A)
+├── retoA_TestRegionDemo.js    (Demo interactivo RETO A)
+├── retoB_BogoHalfDocumentation.js  (Documentación RETO B)
+├── retoC_CatalogServiceDocumentation.js  (Documentación RETO C)
 └── demoRetoA_InterfazWeb.js   (Guía interfaz web RETO A)
+
+Documentación:
+├── README.md                  (Este archivo - Guía principal)
+├── ARQUITECTURA_FINAL.md      (Documentación técnica detallada)
+├── PROMPTLOG.md               (Log de prompts y decisiones)
+└── RESUMEN.txt                (Resumen ejecutivo del proyecto)
 ```
 
 ## 🎯 RETOS IMPLEMENTADOS
@@ -133,15 +143,15 @@ Ejecuta estos comandos para probar cada funcionalidad:
 
 ```bash
 # Verificar RETO A (TestRegionTaxPolicy)
-node verificarRetoA.js
-node testRapidoRetoA.js
-node demoRetoA_InterfazWeb.js
+node tests/verificarRetoA.js
+node tests/testRapidoRetoA.js
+node tests/demoRetoA_InterfazWeb.js
 
 # Demostrar RETO B (BOGO_HALF)
-node ejecutarRetoB.js
+node tests/ejecutarRetoB.js
 
 # Demostrar RETO C (Catalog Service)
-node ejecutarRetoC.js
+node tests/ejecutarRetoC.js
 
 # Ejecutar todas las pruebas unitarias
 node tests/smokeTests.js
