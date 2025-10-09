@@ -1,8 +1,34 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { formatCurrency } from "./utils/money";
+import { logger, setLogLevel } from "./utils/log";
+import { calcTotalNumber, defaultTaxPolicy } from "./domain/pricing";
+import ProductList from "./components/ProductList";
+import Cart from "./components/Cart";
+import Checkout from "./components/Checkout";
 
-let GLOBAL_LOG_LEVEL = 'info';
+/**
+ * @typedef {Object} Product
+ * @property {number} id Identificador del producto.
+ * @property {string} name Nombre del producto.
+ * @property {number} price Precio unitario en USD.
+ */
+
+/**
+ * @typedef {Object} CartItem
+ * @property {number} id Identificador del producto.
+ * @property {string} name Nombre del producto.
+ * @property {number} price Precio unitario en USD.
+ * @property {number} qty Cantidad en el carrito.
+ */
 
 // Simula "API"
+/**
+ * Recupera el catálogo de productos (simulado).
+ * @returns {Promise<Product[]>} Promesa que resuelve con la lista de productos.
+ * @example
+ * const productos = await fetchProducts();
+ * console.log(productos[0].name);
+ */
 async function fetchProducts() {
   return [
     { id: 1, name: 'Mouse', price: 20 },
@@ -11,9 +37,10 @@ async function fetchProducts() {
   ];
 }
 
-function formatCurrency(n) {
-  return `$${n.toFixed(2)}`;
-}
+// Funciones puras movidas a domain/pricing
+
+// Configura el nivel de logging una sola vez.
+setLogLevel('info');
 
 export default function App() {
   const [products, setProducts] = useState([]);
@@ -21,132 +48,165 @@ export default function App() {
   const [region, setRegion] = useState('CR');
   const [coupon, setCoupon] = useState('');
   const [isPremium, setIsPremium] = useState(true);
-  const [totalDisplay, setTotalDisplay] = useState('$0.00');
+  const [taxPolicyKind, setTaxPolicyKind] = useState('DEFAULT'); // DEFAULT | GLOBAL_8 | CUSTOM
+  const [taxPolicyJSON, setTaxPolicyJSON] = useState(JSON.stringify(defaultTaxPolicy, null, 2));
+  const [taxPolicyError, setTaxPolicyError] = useState('');
 
   useEffect(() => {
     fetchProducts().then(setProducts);
   }, []);
 
+  /**
+   * Resuelve la política de impuestos activa en base al selector de UI.
+   * Si el modo es CUSTOM, intenta parsear el JSON y valida que sea un objeto.
+   * @returns {{taxPolicy: any, policyError: string}}
+   */
+  const { taxPolicy, policyError } = useMemo(() => {
+    // Resolver taxPolicy y validar JSON si aplica
+    if (taxPolicyKind === 'GLOBAL_8') {
+      return { taxPolicy: { DEFAULT: 0.08 }, policyError: '' };
+    }
+    if (taxPolicyKind === 'CUSTOM') {
+      try {
+        const obj = JSON.parse(taxPolicyJSON);
+        if (obj && typeof obj === 'object') return { taxPolicy: obj, policyError: '' };
+        return { taxPolicy: defaultTaxPolicy, policyError: 'El JSON debe ser un objeto con tasas por región.' };
+      } catch (e) {
+        logger.warn('[WARN] JSON de taxPolicy inválido, usando DEFAULT');
+        return { taxPolicy: defaultTaxPolicy, policyError: 'JSON inválido. Usando política por defecto.' };
+      }
+    }
+    return { taxPolicy: defaultTaxPolicy, policyError: '' };
+  }, [taxPolicyKind, taxPolicyJSON]);
+
+  useEffect(() => {
+    setTaxPolicyError(policyError);
+  }, [policyError]);
+
+  // Derivar totales reactivamente según estado y política
+  /**
+   * Calcula los totales (subtotal, descuentos, impuestos y total final) de forma pura.
+   * @returns {{subtotal:number, afterUserDiscount:number, afterCoupons:number, taxes:number, total:number}}
+   * @example
+   * // Muestra el total formateado
+   * formatCurrency(totals.total)
+   */
+  const totals = useMemo(() => {
+    return calcTotalNumber(cart, { isPremium, coupon, region, taxPolicy });
+  }, [cart, isPremium, coupon, region, taxPolicy]);
+
+  // Logging del breakdown cuando cambian los totales
+  useEffect(() => {
+    if (!totals) return;
+    if (isPremium) {
+      logger.info('[INFO] Premium -5%');
+    }
+    if (coupon === 'PROMO10' && totals.afterUserDiscount >= 50) {
+      logger.info('[INFO] Cupón PROMO10 -10%');
+    } else if (coupon === 'FIJO20' && totals.afterUserDiscount >= 50) {
+      logger.info('[INFO] Cupón FIJO20 -$20');
+    }
+    logger.info(`[INFO] Subtotal=${formatCurrency(totals.afterCoupons)} Taxes=${formatCurrency(totals.taxes)} Total=${formatCurrency(totals.total)}`);
+  }, [totals, isPremium, coupon]);
+
+  /**
+   * Agrega un producto al carrito o incrementa su cantidad.
+   * @param {Product} p Producto a agregar.
+   * @returns {void}
+   * @example
+   * addToCart({ id: 1, name: 'Mouse', price: 20 })
+   */
   function addToCart(p) {
-    const copy = cart.slice();
-    const idx = copy.findIndex(i => i.id === p.id);
-    if (idx >= 0) copy[idx].qty += 1;
-    else copy.push({ ...p, qty: 1 });
-    setCart(copy);
-    if (GLOBAL_LOG_LEVEL === 'info') console.log('[INFO] addToCart', p.name);
-    recalc(copy, isPremium, coupon, region);
+    setCart(prev => {
+      const idx = prev.findIndex(i => i.id === p.id);
+      if (idx >= 0) {
+        const next = prev.slice();
+        next[idx] = { ...next[idx], qty: next[idx].qty + 1 };
+        return next;
+      }
+      return [...prev, { ...p, qty: 1 }];
+    });
+    logger.info('[INFO] addToCart', p.name);
   }
 
+  /**
+   * Cambia la cantidad de un ítem del carrito y elimina si la cantidad es 0.
+   * @param {number} id ID del producto en el carrito.
+   * @param {number} qty Nueva cantidad (>= 0).
+   * @returns {void}
+   * @example
+   * changeQty(2, 3) // pone el producto 2 con qty 3
+   */
   function changeQty(id, qty) {
-    const copy = cart.map(i => i.id === id ? { ...i, qty: Math.max(0, qty) } : i);
-    setCart(copy);
-    recalc(copy, isPremium, coupon, region);
+    setCart(prev => prev
+      .map(i => i.id === id ? { ...i, qty: Math.max(0, qty) } : i)
+      .filter(i => i.qty > 0)
+    );
   }
 
-  function recalc(cartArg, premiumArg, couponArg, regionArg) {
-    // subtotal
-    let subtotal = 0;
-    for (const item of cartArg) {
-      subtotal += (item.price || 0) * (item.qty || 0);
-    }
-    // premium 5%
-    if (premiumArg) {
-      subtotal = subtotal - subtotal * 0.05;
-      console.log('[INFO] Premium -5%');
-    }
-    // cupón
-    if (couponArg === 'PROMO10' && subtotal >= 50) {
-      subtotal = subtotal * 0.90;
-      console.log('[INFO] Cupón PROMO10 -10%');
-    } else if (couponArg === 'FIJO20' && subtotal >= 50) {
-      subtotal = subtotal - 20;
-      console.log('[INFO] Cupón FIJO20 -$20');
-    }
-    // impuesto por región
-    let taxRate = 0.10;
-    if (regionArg === 'CR') taxRate = 0.13;
-    else if (regionArg === 'US-CA') taxRate = 0.0725;
-    else if (regionArg === 'US-TX') taxRate = 0.0625;
-    const taxes = subtotal * taxRate;
-    let total = subtotal + taxes;
 
-    total = Math.round(total * 100) / 100;
-    setTotalDisplay(formatCurrency(total));
-    console.log(`[INFO] Subtotal=${formatCurrency(subtotal)} Taxes=${formatCurrency(taxes)} Total=${formatCurrency(total)}`);
-  }
-
+  /**
+   * Handler para alternar el modo premium (5% descuento).
+   * @param {React.ChangeEvent<HTMLInputElement>} e Evento del checkbox.
+   */
   function handlePremium(e) {
     setIsPremium(e.target.checked);
-    recalc(cart, e.target.checked, coupon, region);
   }
+  /**
+   * Handler para cambiar el cupón aplicado.
+   * @param {React.ChangeEvent<HTMLSelectElement>} e Evento del select de cupones.
+   */
   function handleCoupon(e) {
     setCoupon(e.target.value);
-    recalc(cart, isPremium, e.target.value, region);
   }
+  /**
+   * Handler para cambiar la región que determina la tasa de impuestos.
+   * @param {React.ChangeEvent<HTMLSelectElement>} e Evento del select de región.
+   */
   function handleRegion(e) {
     setRegion(e.target.value);
-    recalc(cart, isPremium, coupon, e.target.value);
+  }
+
+  /**
+   * Handler para cambiar el tipo de política de impuestos (DEFAULT | GLOBAL_8 | CUSTOM).
+   * @param {React.ChangeEvent<HTMLSelectElement>} e Evento del select de política.
+   */
+  function handleTaxPolicyKind(e) {
+    const kind = e.target.value;
+    setTaxPolicyKind(kind);
+  }
+
+  /**
+   * Handler para actualizar el JSON de la política de impuestos personalizada.
+   * @param {React.ChangeEvent<HTMLTextAreaElement>} e Evento del textarea.
+   */
+  function handleTaxPolicyJSON(e) {
+    setTaxPolicyJSON(e.target.value);
   }
 
   return (
-    <div style={{ padding: 16, fontFamily: 'system-ui' }}>
-      <h1>Tienda</h1>
-
-      <div style={{ display: 'flex', gap: 24 }}>
-        <section>
-          <h2>Productos</h2>
-          {products.map(p => (
-            <div key={p.id} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-              <span>{p.name} — {formatCurrency(p.price)}</span>
-              <button onClick={() => addToCart(p)}>Agregar</button>
-            </div>
-          ))}
-        </section>
-
-        <section>
-          <h2>Carrito</h2>
-          {cart.length === 0 && <p>(vacío)</p>}
-          {cart.map(item => (
-            <div key={item.id} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-              <span>{item.name}</span>
-              <input
-                type="number"
-                min={0}
-                value={item.qty}
-                onChange={e => changeQty(item.id, Number(e.target.value))}
-                style={{ width: 60 }}
-              />
-              <span>@ {formatCurrency(item.price)}</span>
-            </div>
-          ))}
-        </section>
-
-        <section>
-          <h2>Checkout</h2>
-          <label>
-            <input type="checkbox" checked={isPremium} onChange={handlePremium} />
-            Usuario Premium (5%)
-          </label>
-          <div style={{ marginTop: 8 }}>
-            <label> Cupón: </label>
-            <select value={coupon} onChange={handleCoupon}>
-              <option value="">(ninguno)</option>
-              <option value="PROMO10">PROMO10 (-10% min 50)</option>
-              <option value="FIJO20">FIJO20 (-$20 min 50)</option>
-            </select>
-          </div>
-          <div style={{ marginTop: 8 }}>
-            <label>Región: </label>
-            <select value={region} onChange={handleRegion}>
-              <option value="CR">CR (13%)</option>
-              <option value="US-CA">US-CA (7.25%)</option>
-              <option value="US-TX">US-TX (6.25%)</option>
-              <option value="OTRA">OTRA (10%)</option>
-            </select>
-          </div>
-
-          <h3 style={{ marginTop: 16 }}>Total: {totalDisplay}</h3>
-        </section>
+    <div className="app">
+      <div className="header-bar">
+        <h1>Tienda</h1>
+        <small className="muted">Demo de precios con políticas de impuestos</small>
+      </div>
+      <div className="layout">
+        <ProductList products={products} onAdd={addToCart} />
+        <Cart cart={cart} onChangeQty={changeQty} />
+        <Checkout
+          isPremium={isPremium}
+          onTogglePremium={handlePremium}
+          coupon={coupon}
+          onChangeCoupon={handleCoupon}
+          region={region}
+          onChangeRegion={handleRegion}
+          total={totals.total}
+          taxPolicyKind={taxPolicyKind}
+          onChangeTaxPolicyKind={handleTaxPolicyKind}
+          taxPolicyJSON={taxPolicyJSON}
+          onChangeTaxPolicyJSON={handleTaxPolicyJSON}
+          taxPolicyError={taxPolicyError}
+        />
       </div>
     </div>
   );
