@@ -30,6 +30,7 @@ const AVAILABLE_REGIONS = [
   { code: 'CR', name: 'Costa Rica', taxRate: 13 },
   { code: 'US-CA', name: 'California, USA', taxRate: 7.25 },
   { code: 'US-TX', name: 'Texas, USA', taxRate: 6.25 },
+  { code: 'TEST', name: 'TEST (0% impuestos)', taxRate: 0 },
   { code: 'OTRA', name: 'Otras regiones', taxRate: 10 }
 ];
 
@@ -38,6 +39,7 @@ const AVAILABLE_REGIONS = [
  */
 const AVAILABLE_TAX_POLICIES = [
   { type: 'regional', name: 'Regional (Por país)', description: 'Tasas fijas por región' },
+  { type: 'test-region', name: 'Test Region Policy', description: 'Política especial para región TEST (0% impuestos)' },
   { type: 'progressive', name: 'Progresiva', description: 'Tasas que aumentan con el monto' },
   { type: 'premium', name: 'Cliente Premium', description: 'Tasas reducidas para VIP' },
   { type: 'no-tax', name: 'Sin impuestos', description: 'Productos exentos' }

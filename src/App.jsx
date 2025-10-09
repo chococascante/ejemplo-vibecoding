@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { formatCurrency } from "./utils/money.js";
 import { setLogLevel, LOG_LEVELS, logCartOperation, logInfo } from "./utils/log.js";
 import { calcTotalNumber } from "./domain/checkout.js";
-import { defaultTaxPolicy } from "./domain/taxPolicies.js";
+import { defaultTaxPolicy, TestRegionTaxPolicy } from "./domain/taxPolicies.js";
 
 // Importar los nuevos componentes
 import ProductList from "./components/ProductList.jsx";
@@ -54,6 +54,9 @@ export default function App() {
   const [totalDisplay, setTotalDisplay] = useState('$0.00');
   const [currentTaxPolicy, setCurrentTaxPolicy] = useState(defaultTaxPolicy);
   const [lastCalculationDetails, setLastCalculationDetails] = useState(null);
+  
+  // RETO A: Instancia de TestRegionTaxPolicy para región TEST
+  const testRegionTaxPolicy = new TestRegionTaxPolicy();
   
   // RETO C: Estados del servicio de catálogo
   const [catalogState, setCatalogState] = useState(CATALOG_STATES.IDLE);
@@ -214,7 +217,21 @@ export default function App() {
     const newRegion = e.target.value;
     setRegion(newRegion);
     logInfo(`Usuario cambió región a: ${newRegion}`);
-    recalc(cart, isPremium, coupon, newRegion, currentTaxPolicy);
+    
+    // RETO A: Cambiar automáticamente a TestRegionTaxPolicy cuando se selecciona región TEST
+    let policyToUse = currentTaxPolicy;
+    if (newRegion === 'TEST') {
+      policyToUse = testRegionTaxPolicy;
+      setCurrentTaxPolicy(testRegionTaxPolicy);
+      logInfo('RETO A: Aplicando TestRegionTaxPolicy para región TEST (0% impuestos)');
+    } else if (currentTaxPolicy === testRegionTaxPolicy) {
+      // Si estábamos usando TestRegionTaxPolicy y cambiamos a otra región, volver a la política por defecto
+      policyToUse = defaultTaxPolicy;
+      setCurrentTaxPolicy(defaultTaxPolicy);
+      logInfo('Volviendo a política por defecto al salir de región TEST');
+    }
+    
+    recalc(cart, isPremium, coupon, newRegion, policyToUse);
   }
 
   /**
