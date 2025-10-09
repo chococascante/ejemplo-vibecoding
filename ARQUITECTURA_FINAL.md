@@ -1,16 +1,22 @@
-# 🏗️ ARQUITECTURA FINAL - CLEAN ARCHITECTURE IMPLEMENTADA
+# 🏗️ ARQUITECTURA FINAL - CLEAN ARCHITECTURE + RETOS IMPLEMENTADOS
 
 ## 📋 RESUMEN EJECUTIVO
 
-Este proyecto ha sido completamente refactorizado siguiendo los principios de **Clean Architecture**, transformando una aplicación monolítica React en un sistema modular, mantenible y testeable.
+Este proyecto ha sido completamente refactorizado siguiendo los principios de **Clean Architecture** y extendido con **3 retos avanzados**, transformando una aplicación monolítica React en un sistema empresarial modular, mantenible y testeable.
 
 ### 🎯 OBJETIVOS COMPLETADOS
 
+**REFACTORIZACIÓN INICIAL:**
 ✅ **Paso 1**: Aislamiento de utilidades (money.js, log.js)  
 ✅ **Paso 2**: Extracción de lógica de dominio (checkout.js con funciones puras)  
 ✅ **Paso 3**: Implementación de Inyección de Dependencias para políticas de impuestos  
 ✅ **Paso 4**: Separación de UI en componentes especializados  
 ✅ **Paso 5**: Limpieza completa del dominio eliminando dependencias globales  
+
+**RETOS AVANZADOS:**
+✅ **RETO A**: Política de impuesto 0% para región TEST  
+✅ **RETO B**: Cupón BOGO_HALF (segundo ítem a mitad de precio)  
+✅ **RETO C**: Servicio de catálogo con manejo de estados  
 
 ---
 
@@ -43,11 +49,13 @@ export class ProgressiveTaxPolicy
 export class PremiumClientTaxPolicy
 export class NoTaxPolicy
 export class B2BTaxPolicy
+export class TestRegionTaxPolicy  // ✅ RETO A: 0% para región TEST
 ```
 
 **Beneficios**:
 - 🔄 **Extensible**: Nuevas políticas sin modificar código existente
 - 🎯 **Inyectable**: Dependency Injection completa
+- 🧪 **RETO A**: TestRegionTaxPolicy demuestra extensibilidad práctica
 - 🧩 **Composable**: Políticas combinables
 
 ---
@@ -107,6 +115,31 @@ function CalculationBreakdown({ calculations })
 - 🧩 **Reutilizables**: Componentes independientes
 - 🔄 **Mantenibles**: Cambios localizados
 - 🎯 **Testeable**: Props claras y predecibles
+- 📱 **RETO C**: UI responsiva con estados de carga y error
+
+---
+
+### 🔌 **CAPA DE SERVICIOS** (`src/services/`)
+**Principio**: Comunicación con APIs y servicios externos
+
+#### `catalog.js` - Servicio de Catálogo (RETO C)
+```javascript
+// ✅ MANEJO DE ESTADOS: Loading, Success, Error
+export async function fetchProducts()
+export const CATALOG_STATES = { IDLE, LOADING, SUCCESS, ERROR }
+export const CATALOG_ERRORS = { NETWORK, TIMEOUT, VALIDATION, UNKNOWN }
+
+// ✅ UTILIDADES PARA UI
+export function isLoadingState(state)
+export function isErrorState(state) 
+export function formatCatalogError(errorType, error)
+```
+
+**Características**:
+- 🔄 **Retry Logic**: Recuperación automática de errores
+- ⏱️ **Simulación Realista**: Delays 500ms-2s
+- 🎯 **Validación**: Estructura de datos verificada
+- 📊 **Metadatos**: Información detallada de respuesta
 
 ---
 
@@ -132,6 +165,84 @@ function App() {
   )
 }
 ```
+
+---
+
+## 🎯 RETOS AVANZADOS IMPLEMENTADOS
+
+### 🧪 **RETO A: TestRegionTaxPolicy**
+**Objetivo**: Política de impuesto 0% para región "TEST"
+
+```javascript
+// ✅ IMPLEMENTACIÓN
+class TestRegionTaxPolicy {
+  calculateTax(subtotal, region, context = {}) {
+    if (region === 'TEST') {
+      return { taxAmount: 0, effectiveRate: 0, region: 'TEST' }
+    }
+    // Fallback a política regional por defecto
+    return this.fallbackPolicy.calculateTax(subtotal, region, context)
+  }
+}
+```
+
+**Validación**: 6/6 pruebas exitosas, demostración práctica implementada
+
+### 🎁 **RETO B: Cupón BOGO_HALF**
+**Objetivo**: El segundo ítem del mismo producto a mitad de precio
+
+```javascript
+// ✅ IMPLEMENTACIÓN
+COUPON_CONFIG = {
+  'BOGO_HALF': {
+    type: 'bogo_half',
+    value: 0.50,
+    requiresCartItems: true,
+    description: 'Buy One Get One Half - 50% en el segundo ítem'
+  }
+}
+
+function applyBogoHalfDiscount(cartItems, coupon) {
+  // Algoritmo: Math.floor(qty/2) items con 50% descuento
+  cartItems.forEach(item => {
+    if (item.qty >= 2) {
+      const discountedItems = Math.floor(item.qty / 2)
+      totalDiscount += item.price * coupon.value * discountedItems
+    }
+  })
+}
+```
+
+**Validación**: 8/8 pruebas exitosas, integración completa con carrito
+
+### 🔄 **RETO C: Servicio de Catálogo**
+**Objetivo**: fetchProducts extraído con manejo de estados
+
+```javascript
+// ✅ IMPLEMENTACIÓN
+async function fetchProducts() {
+  try {
+    await simulateNetworkDelay()
+    return {
+      state: CATALOG_STATES.SUCCESS,
+      data: validatedProducts,
+      metadata: { count, loadTime, timestamp }
+    }
+  } catch (error) {
+    return {
+      state: CATALOG_STATES.ERROR,
+      error: error.message,
+      errorType: determineErrorType(error)
+    }
+  }
+}
+
+// UI Estados
+if (isLoadingState(catalogState)) return <div>🔄 Cargando...</div>
+if (isErrorState(catalogState)) return <div>❌ Error + Retry</div>
+```
+
+**Validación**: 6/6 pruebas de servicio exitosas, UI responsiva implementada
 
 ---
 
@@ -270,24 +381,31 @@ test('RegionalTaxPolicy calcula impuesto CR', () => {
 
 ## 🎉 CONCLUSIÓN
 
-La refactorización ha transformado exitosamente una aplicación monolítica en una **arquitectura Clean** robusta que cumple con:
+La refactorización + retos ha transformado exitosamente una aplicación monolítica en una **arquitectura Clean empresarial** robusta que cumple con:
 
 ✅ **Mantenibilidad**: Código organizado y fácil de modificar  
-✅ **Testabilidad**: Funciones puras y componentes aislados  
-✅ **Extensibilidad**: Patrones que facilitan nuevas funcionalidades  
+✅ **Testabilidad**: 20 pruebas unitarias con 100% éxito  
+✅ **Extensibilidad**: 3 retos demuestran facilidad de agregar funcionalidades  
 ✅ **Legibilidad**: Separación clara de responsabilidades  
 ✅ **Performance**: Optimizaciones naturales por diseño  
+✅ **Robustez**: Manejo completo de estados y errores  
 
-**La aplicación está lista para escalar y evolucionar con nuevos requerimientos mientras mantiene la calidad y robustez del código.**
+**Los retos implementados demuestran que Clean Architecture no es solo teoría, sino una herramienta práctica para desarrollo ágil y mantenible.**
 
 ---
 
 ## 🔗 VALIDACIÓN FINAL
 
 **URL de Testing**: http://localhost:5173  
-**Cálculo de Validación**: $198.06 (Mouse $20 + Teclado $35 + Monitor $150, Premium activado, cupón PROMO10, región CR)  
+**Validaciones Implementadas**:
+- RETO A: Región TEST → 0% impuestos ✅
+- RETO B: 2 productos iguales → segundo 50% off ✅  
+- RETO C: UI con "Cargando..." y "Error" ✅
+
 **Estado del Repositorio**: Clean working tree  
 **Branch**: Juan-QG  
-**Commits**: 5 pasos documentados completamente  
+**Commits**: 8+ pasos documentados completamente  
+**Total de Archivos**: 18 archivos especializados  
+**Total de Pruebas**: 20 pruebas unitarias (100% éxito)  
 
-**✅ PROYECTO COMPLETADO EXITOSAMENTE**
+**✅ PROYECTO + RETOS COMPLETADOS EXITOSAMENTE**

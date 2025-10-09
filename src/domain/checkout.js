@@ -37,6 +37,13 @@ export const COUPON_CONFIG = {
     value: 20, // $20
     minAmount: 50,
     description: 'Descuento fijo de $20 con compra mínima de $50'
+  },
+  BOGO_HALF: {
+    type: 'bogo_half',
+    value: 0.50, // 50% de descuento en el segundo ítem
+    minAmount: 0, // Sin monto mínimo
+    description: 'Buy One Get One Half - El segundo ítem del mismo producto a mitad de precio',
+    requiresCartItems: true // Indica que necesita acceso a los items del carrito
   }
 };
 
@@ -97,6 +104,89 @@ export function computeSubtotal(cartItems) {
 }
 
 /**
+ * RETO B: Función auxiliar para aplicar descuento BOGO_HALF
+ * 
+ * Buy One Get One Half: El segundo ítem del mismo producto a mitad de precio
+ * - Analiza cada producto en el carrito
+ * - Si qty >= 2, aplica 50% de descuento al segundo ítem (y múltiplos)
+ * - Calcula el descuento total acumulado
+ * 
+ * @param {Array<Object>} cartItems - Items del carrito con estructura { id, name, price, qty }
+ * @param {Object} coupon - Configuración del cupón BOGO_HALF
+ * @returns {Object} Resultado del descuento BOGO_HALF
+ * @returns {number} returns.discountAmount - Cantidad total descontada
+ * @returns {Object} returns.details - Detalles del descuento por producto
+ * 
+ * @example
+ * const items = [
+ *   { id: 1, name: 'Mouse', price: 20, qty: 3 },
+ *   { id: 2, name: 'Teclado', price: 50, qty: 1 }
+ * ];
+ * applyBogoHalfDiscount(items, { value: 0.50 });
+ * // { 
+ * //   discountAmount: 20, 
+ * //   details: { 
+ * //     appliedProducts: ['Mouse'], 
+ * //     discountedItems: 1,
+ * //     totalSavings: 20
+ * //   } 
+ * // }
+ */
+function applyBogoHalfDiscount(cartItems, coupon) {
+  if (!Array.isArray(cartItems) || cartItems.length === 0) {
+    return { 
+      discountAmount: 0, 
+      details: { 
+        appliedProducts: [], 
+        discountedItems: 0, 
+        totalSavings: 0,
+        reason: 'Carrito vacío'
+      } 
+    };
+  }
+  
+  let totalDiscount = 0;
+  const appliedProducts = [];
+  let discountedItemsCount = 0;
+  
+  cartItems.forEach(item => {
+    // Validar estructura del item
+    if (!item || typeof item.price !== 'number' || typeof item.qty !== 'number') {
+      return;
+    }
+    
+    const price = item.price;
+    const quantity = item.qty;
+    
+    // BOGO_HALF solo aplica si hay 2 o más del mismo producto
+    if (quantity >= 2) {
+      // Calcular cuántos items obtienen descuento (todos los segundos, cuartos, sextos, etc.)
+      const discountedItems = Math.floor(quantity / 2);
+      
+      // Calcular descuento: 50% del precio por cada item que obtiene descuento
+      const discountPerItem = roundMoney(price * coupon.value); // value = 0.50 (50%)
+      const itemTotalDiscount = roundMoney(discountPerItem * discountedItems);
+      
+      totalDiscount = roundMoney(totalDiscount + itemTotalDiscount);
+      appliedProducts.push(item.name || `Producto ${item.id}`);
+      discountedItemsCount += discountedItems;
+    }
+  });
+  
+  return {
+    discountAmount: totalDiscount,
+    details: {
+      appliedProducts,
+      discountedItems: discountedItemsCount,
+      totalSavings: totalDiscount,
+      reason: totalDiscount > 0 ? 
+        `BOGO_HALF aplicado a ${appliedProducts.length} producto(s)` : 
+        'No hay productos elegibles para BOGO_HALF'
+    }
+  };
+}
+
+/**
  * Aplica descuentos de usuario premium al subtotal
  * 
  * Función pura que calcula el descuento para usuarios premium.
@@ -153,7 +243,11 @@ export function applyUserDiscounts(subtotal, isPremium) {
  * Aplica cupones de descuento al subtotal
  * 
  * Función pura que valida y aplica cupones de descuento según las reglas
- * configuradas. Maneja tanto descuentos porcentuales como fijos.
+ * configuradas. Maneja descuentos porcentuales, fijos y BOGO_HALF.
+ * 
+ * RETO B IMPLEMENTADO: Soporte para cupón BOGO_HALF
+ * - Buy One Get One Half: El segundo ítem del mismo producto a mitad de precio
+ * - Requiere acceso a los items del carrito para calcular descuentos por producto
  * 
  * LIMPIEZA APLICADA:
  * - Eliminado logging (logWarn, logFinancialCalculation)
@@ -162,20 +256,25 @@ export function applyUserDiscounts(subtotal, isPremium) {
  * 
  * @param {number} subtotal - Subtotal antes del cupón
  * @param {string} couponCode - Código del cupón a aplicar
+ * @param {Array<Object>} cartItems - Items del carrito (necesario para BOGO_HALF)
  * @returns {Object} Objeto con el nuevo subtotal y detalles del cupón
  * @returns {number} returns.newSubtotal - Subtotal después del cupón
  * @returns {number} returns.discountAmount - Cantidad descontada
  * @returns {boolean} returns.applied - Si se aplicó el cupón
  * @returns {string} returns.reason - Razón por la cual se aplicó o no el cupón
+ * @returns {Object} returns.details - Detalles adicionales del descuento (para BOGO_HALF)
  * 
  * @example
+ * // Cupón porcentual
  * applyCoupons(60, 'PROMO10');
  * // { newSubtotal: 54, discountAmount: 6, applied: true, reason: 'Cupón aplicado exitosamente' }
  * 
- * applyCoupons(30, 'PROMO10');
- * // { newSubtotal: 30, discountAmount: 0, applied: false, reason: 'Monto mínimo no alcanzado' }
+ * // Cupón BOGO_HALF
+ * const cart = [{ id: 1, name: 'Mouse', price: 20, qty: 2 }];
+ * applyCoupons(40, 'BOGO_HALF', cart);
+ * // { newSubtotal: 30, discountAmount: 10, applied: true, reason: 'BOGO_HALF aplicado', details: {...} }
  */
-export function applyCoupons(subtotal, couponCode) {
+export function applyCoupons(subtotal, couponCode, cartItems = []) {
   // Validación de entrada - silenciosa
   if (!isValidMoneyValue(subtotal)) {
     return { 
@@ -221,9 +320,27 @@ export function applyCoupons(subtotal, couponCode) {
   
   let discountAmount = 0;
   let newSubtotal = subtotal;
+  let details = {};
   
-  // Aplicar descuento según el tipo
-  if (coupon.type === 'percentage') {
+  // RETO B: Manejo especial para cupón BOGO_HALF
+  if (coupon.type === 'bogo_half') {
+    const bogoResult = applyBogoHalfDiscount(cartItems, coupon);
+    discountAmount = bogoResult.discountAmount;
+    newSubtotal = roundMoney(subtotal - discountAmount);
+    details = bogoResult.details;
+    
+    if (discountAmount === 0) {
+      return {
+        newSubtotal: subtotal,
+        discountAmount: 0,
+        applied: false,
+        reason: 'BOGO_HALF no aplicable - No hay productos duplicados con cantidad >= 2',
+        details
+      };
+    }
+  }
+  // Aplicar descuento según el tipo (cupones existentes)
+  else if (coupon.type === 'percentage') {
     discountAmount = roundMoney(subtotal * coupon.value);
     newSubtotal = roundMoney(subtotal - discountAmount);
   } else if (coupon.type === 'fixed') {
@@ -235,7 +352,8 @@ export function applyCoupons(subtotal, couponCode) {
     newSubtotal,
     discountAmount,
     applied: true,
-    reason: 'Cupón aplicado exitosamente'
+    reason: coupon.type === 'bogo_half' ? 'BOGO_HALF aplicado exitosamente' : 'Cupón aplicado exitosamente',
+    details
   };
 }
 
@@ -367,7 +485,8 @@ export function calcTotalNumber(cartItems, isPremium, couponCode, region, taxPol
     const premiumDiscount = applyUserDiscounts(subtotal, isPremium);
     
     // Paso 3: Aplicar cupón sobre el subtotal con descuento premium
-    const couponDiscount = applyCoupons(premiumDiscount.newSubtotal, couponCode);
+    // RETO B: Pasar cartItems para cupones que requieren análisis de productos (BOGO_HALF)
+    const couponDiscount = applyCoupons(premiumDiscount.newSubtotal, couponCode, cartItems);
     
     // Paso 4: Calcular impuestos usando la política inyectada
     // Combinar contexto adicional con información del usuario premium

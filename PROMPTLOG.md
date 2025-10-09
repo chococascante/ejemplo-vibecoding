@@ -163,23 +163,118 @@ Tone: Profesional y claro.
 
 ---
 
+### **PROMPT #9** - RETO A: Política de Impuesto 0% para Región TEST
+**Fecha**: 9 de octubre, 2025  
+**Prompt**:
+```
+Context: Reto A — Impuesto 0% para región TEST
+Role: Desarrollador Senior.
+Action: Implementa una nueva política de impuestos que aplique 0% de impuestos para la región "TEST", manteniendo la Clean Architecture existente.
+Format: Implementa las funcionalidades, usando nombres consistentes, buenas prácticas de diseño y documentacion detallada.
+Test: Mantén el mismo comportamiento esperado.
+```
+
+**Descripción del Ajuste**: Implementación de nueva política de impuestos usando Strategy Pattern, demostrando extensibilidad de Clean Architecture.
+
+**Resultados Obtenidos**:
+- Creación de `TestRegionTaxPolicy` en taxPolicies.js
+- 6 pruebas unitarias implementadas (100% exitosas)
+- Demostración práctica con `ejecutarRetoA.js`
+- Documentación completa en `retoA_TestRegionDemo.js`
+
+---
+
+### **PROMPT #10** - RETO B: Cupón BOGO_HALF
+**Fecha**: 9 de octubre, 2025  
+**Prompt**:
+```
+Context: Reto B — Nuevo cupón BOGO_HALF Agrega soporte para un cupón que haga el segundo ítem a mitad de precio
+Role: Desarrollador Senior.
+Action: Con dos productos iguales, el total antes de impuestos debe reflejar la mitad del segundo
+Format: Implementa las funcionalidades, usando nombres consistentes, buenas prácticas de diseño y documentacion detallada.
+Test: Mantén el mismo comportamiento esperado.
+```
+
+**Descripción del Ajuste**: Implementación de cupón complejo que requiere análisis del carrito para aplicar descuentos a productos duplicados.
+
+**Resultados Obtenidos**:
+- COUPON_CONFIG ampliado con tipo 'bogo_half'
+- Función `applyBogoHalfDiscount()` para lógica específica
+- `applyCoupons()` modificado para recibir cartItems
+- 8 pruebas unitarias implementadas (100% exitosas)
+- Demostración práctica con `ejecutarRetoB.js`
+
+---
+
+### **PROMPT #11** - RETO C: Servicio de Catálogo
+**Fecha**: 9 de octubre, 2025  
+**Prompt**:
+```
+Context: Reto C — Servicio de catálogo
+Role: Desarrollador Senior.
+Action: 
+	1- Extrae fetchProducts a src/services/catalog.js e implementa manejo de carga y error.
+	2- La UI muestra Cargando... o Error según el estado de la petición.
+Format: Implementa las funcionalidades, usando nombres consistentes, buenas prácticas de diseño y documentacion detallada.
+Test: Mantén el mismo comportamiento esperado.
+```
+
+**Descripción del Ajuste**: Extracción de lógica de API a servicio dedicado con manejo completo de estados y UI responsiva.
+
+**Resultados Obtenidos**:
+- Creación de `src/services/catalog.js` con estados y retry logic
+- `App.jsx` actualizado con manejo de estados catalogState/catalogError
+- `ProductList.jsx` con UI condicional para loading/error
+- 6 pruebas de servicio implementadas (100% exitosas)
+- Demostración práctica con `ejecutarRetoC.js`
+
+---
+
+### **PROMPT #12** - Documentación Final
+**Fecha**: 9 de octubre, 2025  
+**Prompt**:
+```
+Context: Documentar
+Role: Desarrollador Senior.
+Action: 
+	1- Actualizar el archivo RESUMEN.txt con lo aplicado recientemente.
+	2- Actualizar el archivo PROMPTLOG.md con los prompts ejecutados actualmente siguiendo el estándar ya aplicado.
+	3- Actualizar el archivo ARQUITECTURA_FINAL.md con lo aplicado recientemente.
+	4- Realizar un commit de los cambios aplicados y subir los cambios al github.
+Format: Implementa las funcionalidades, usando nombres consistentes, buenas prácticas de diseño y documentacion detallada.
+Test: Mantén el mismo comportamiento esperado.
+```
+
+**Descripción del Ajuste**: Actualización completa de documentación para incluir los 3 retos implementados y commit final al repositorio.
+
+**Resultados Obtenidos**:
+- Actualización de RESUMEN.txt con todos los retos
+- Actualización de PROMPTLOG.md con nuevos prompts
+- Actualización de ARQUITECTURA_FINAL.md
+- Commit y push de todos los cambios
+
+---
+
 ## 📈 Resumen de Resultados
 
-**Total de Prompts**: 8  
-**Duración del Ejercicio**: 1 día (8 de octubre, 2025)  
-**Commits Realizados**: 5 commits principales  
-**Archivos Creados**: 12 archivos nuevos  
-**Líneas de Código**: ~1,500 líneas documentadas  
+**Total de Prompts**: 12  
+**Duración del Ejercicio**: 2 días (8-9 de octubre, 2025)  
+**Commits Realizados**: 8+ commits principales  
+**Archivos Creados**: 18 archivos nuevos  
+**Líneas de Código**: ~3,000+ líneas documentadas  
 
 **Objetivos Cumplidos**:
 - ✅ Separación de responsabilidades
 - ✅ Funciones puras de dominio
 - ✅ Inyección de dependencias
 - ✅ Componentización de UI
-- ✅ Documentación y pruebas básicas
+- ✅ Documentación y pruebas completas
+- ✅ RETO A: TestRegionTaxPolicy (0% impuestos)
+- ✅ RETO B: Cupón BOGO_HALF (segundo ítem 50% off)
+- ✅ RETO C: Servicio de catálogo con estados
 
-**Estado Final**: Aplicación completamente refactorizada siguiendo principios de Clean Architecture, manteniendo 100% de la funcionalidad original.
+**Estado Final**: Aplicación completamente refactorizada + 3 retos avanzados implementados siguiendo principios de Clean Architecture, con 20 pruebas unitarias y manteniendo 100% de la funcionalidad original.
 
 ---
 
-**Nota**: Este log documenta únicamente los prompts proporcionados por el estudiante y sus resultados, como parte del ejercicio académico de refactorización de software.
+**Nota**: Este log documenta únicamente los prompts proporcionados por el estudiante y sus resultados, como parte del ejercicio académico de refactorización de software y implementación de retos avanzados.

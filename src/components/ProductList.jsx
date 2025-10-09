@@ -23,6 +23,8 @@ import { logCartOperation } from '../utils/log.js';
 /**
  * Componente ProductList
  * 
+ * RETO C ACTUALIZADO: Manejo de estados de carga y error del servicio de catálogo
+ * 
  * Renderiza una lista de productos con botones para agregar al carrito.
  * Recibe productos y función de callback como props para mantener
  * la separación entre UI y lógica de estado.
@@ -31,6 +33,8 @@ import { logCartOperation } from '../utils/log.js';
  * @param {Array<Object>} props.products - Lista de productos disponibles
  * @param {Function} props.onAddToCart - Callback para agregar producto al carrito
  * @param {boolean} props.loading - Indica si los productos están cargando
+ * @param {string} props.error - Mensaje de error si hubo problema cargando
+ * @param {Function} props.onRetry - Callback para reintentar carga
  * @param {string} props.className - Clases CSS adicionales (opcional)
  * @returns {JSX.Element} Componente renderizado
  * 
@@ -39,12 +43,16 @@ import { logCartOperation } from '../utils/log.js';
  *   products={products}
  *   onAddToCart={handleAddToCart}
  *   loading={isLoading}
+ *   error={errorMessage}
+ *   onRetry={retryFunction}
  * />
  */
 export default function ProductList({ 
   products = [], 
   onAddToCart, 
   loading = false, 
+  error = null,
+  onRetry,
   className = '' 
 }) {
   /**
@@ -71,7 +79,7 @@ export default function ProductList({
     onAddToCart(product);
   };
 
-  // Renderizado condicional para estado de carga
+  // RETO C: Renderizado condicional para estado de carga
   if (loading) {
     return (
       <section className={`product-list loading ${className}`}>
@@ -79,10 +87,58 @@ export default function ProductList({
         <div className="loading-message" style={{ 
           padding: '20px', 
           textAlign: 'center', 
-          color: '#666',
-          fontStyle: 'italic' 
+          color: '#1976d2',
+          fontStyle: 'italic',
+          backgroundColor: '#f3f8ff',
+          borderRadius: '4px',
+          border: '1px solid #e3f2fd'
         }}>
-          Cargando productos...
+          <div style={{ fontSize: '1.2em', marginBottom: '8px' }}>🔄</div>
+          <div>Cargando productos...</div>
+          <div style={{ fontSize: '0.9em', marginTop: '4px', color: '#666' }}>
+            Esto puede tomar unos segundos
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // RETO C: Renderizado para estado de error
+  if (error) {
+    return (
+      <section className={`product-list error ${className}`}>
+        <h2>Productos</h2>
+        <div className="error-message" style={{ 
+          padding: '20px', 
+          textAlign: 'center', 
+          color: '#d32f2f',
+          backgroundColor: '#ffebee',
+          borderRadius: '4px',
+          border: '1px solid #f44336'
+        }}>
+          <div style={{ fontSize: '1.2em', marginBottom: '8px' }}>❌</div>
+          <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>
+            Error cargando productos
+          </div>
+          <div style={{ fontSize: '0.9em', color: '#666', marginBottom: '12px' }}>
+            {error}
+          </div>
+          {onRetry && (
+            <button 
+              onClick={onRetry}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#f44336',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '0.9em'
+              }}
+            >
+              🔄 Reintentar
+            </button>
+          )}
         </div>
       </section>
     );

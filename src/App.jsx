@@ -9,17 +9,18 @@ import ProductList from "./components/ProductList.jsx";
 import Cart from "./components/Cart.jsx";
 import Checkout from "./components/Checkout.jsx";
 
+// RETO C: Importar el nuevo servicio de catálogo
+import { 
+  fetchProducts, 
+  CATALOG_STATES, 
+  isLoadingState, 
+  isErrorState, 
+  isSuccessState,
+  formatCatalogError 
+} from "./services/catalog.js";
+
 // Configurar logging inicial
 setLogLevel(LOG_LEVELS.INFO);
-
-// Simula "API"
-async function fetchProducts() {
-  return [
-    { id: 1, name: 'Mouse', price: 20 },
-    { id: 2, name: 'Teclado', price: 35 },
-    { id: 3, name: 'Monitor', price: 150 },
-  ];
-}
 
 /**
  * Componente principal App - Orquestador de la aplicación
@@ -51,22 +52,50 @@ export default function App() {
   const [coupon, setCoupon] = useState('');
   const [isPremium, setIsPremium] = useState(true);
   const [totalDisplay, setTotalDisplay] = useState('$0.00');
-  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [currentTaxPolicy, setCurrentTaxPolicy] = useState(defaultTaxPolicy);
   const [lastCalculationDetails, setLastCalculationDetails] = useState(null);
+  
+  // RETO C: Estados del servicio de catálogo
+  const [catalogState, setCatalogState] = useState(CATALOG_STATES.IDLE);
+  const [catalogError, setCatalogError] = useState(null);
+  const [catalogErrorType, setCatalogErrorType] = useState(null);
+
+  // RETO C: Función para cargar productos usando el nuevo servicio
+  const loadProducts = async () => {
+    setCatalogState(CATALOG_STATES.LOADING);
+    setCatalogError(null);
+    setCatalogErrorType(null);
+    
+    try {
+      const result = await fetchProducts();
+      
+      if (result.state === CATALOG_STATES.SUCCESS) {
+        setProducts(result.data);
+        setCatalogState(CATALOG_STATES.SUCCESS);
+        logInfo('Productos cargados exitosamente desde servicio', { 
+          count: result.data.length,
+          loadTime: result.metadata.loadTime 
+        });
+      } else if (result.state === CATALOG_STATES.ERROR) {
+        setCatalogState(CATALOG_STATES.ERROR);
+        setCatalogError(result.error);
+        setCatalogErrorType(result.errorType);
+        logInfo('Error cargando productos desde servicio', { 
+          error: result.error,
+          errorType: result.errorType 
+        });
+      }
+    } catch (error) {
+      setCatalogState(CATALOG_STATES.ERROR);
+      setCatalogError(error.message);
+      setCatalogErrorType('unknown_error');
+      logInfo('Error inesperado cargando productos', { error: error.message });
+    }
+  };
 
   // Cargar productos al montar el componente
   useEffect(() => {
-    fetchProducts()
-      .then(productData => {
-        setProducts(productData);
-        setIsLoadingProducts(false);
-        logInfo('Productos cargados exitosamente', { count: productData.length });
-      })
-      .catch(error => {
-        console.error('Error cargando productos:', error);
-        setIsLoadingProducts(false);
-      });
+    loadProducts();
   }, []);
 
   /**
@@ -201,12 +230,62 @@ export default function App() {
     <div style={{ padding: 16, fontFamily: 'system-ui' }}>
       <h1>Tienda - Arquitectura por Componentes</h1>
       
+      {/* RETO C: Mostrar estado de carga global si aplica */}
+      {isLoadingState(catalogState) && (
+        <div style={{ 
+          padding: '16px', 
+          backgroundColor: '#e3f2fd', 
+          borderRadius: '4px', 
+          marginBottom: '16px',
+          textAlign: 'center',
+          color: '#1976d2'
+        }}>
+          <div style={{ marginBottom: '8px' }}>🔄 Cargando productos del catálogo...</div>
+          <div style={{ fontSize: '0.9em', color: '#666' }}>
+            Esto puede tomar unos segundos
+          </div>
+        </div>
+      )}
+
+      {/* RETO C: Mostrar error global si aplica */}
+      {isErrorState(catalogState) && (
+        <div style={{ 
+          padding: '16px', 
+          backgroundColor: '#ffebee', 
+          borderRadius: '4px', 
+          marginBottom: '16px',
+          border: '1px solid #f44336'
+        }}>
+          <div style={{ color: '#d32f2f', fontWeight: 'bold', marginBottom: '8px' }}>
+            ❌ Error cargando productos
+          </div>
+          <div style={{ color: '#666', marginBottom: '12px' }}>
+            {formatCatalogError(catalogErrorType, catalogError)}
+          </div>
+          <button 
+            onClick={loadProducts}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#f44336',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            🔄 Reintentar
+          </button>
+        </div>
+      )}
+      
       <div style={{ display: 'flex', gap: 24 }}>
         {/* Componente ProductList - Lista de productos */}
         <ProductList 
           products={products}
           onAddToCart={handleAddToCart}
-          loading={isLoadingProducts}
+          loading={isLoadingState(catalogState)}
+          error={isErrorState(catalogState) ? formatCatalogError(catalogErrorType, catalogError) : null}
+          onRetry={loadProducts}
         />
 
         {/* Componente Cart - Gestión del carrito */}
@@ -251,6 +330,8 @@ export default function App() {
         ✅ <strong>Checkout</strong>: Componente para proceso de compra y cálculos
         <br />
         ✅ <strong>App</strong>: Orquestador que conecta componentes con dominio
+        <br />
+        ✅ <strong>RETO C</strong>: Servicio de catálogo con manejo de carga y errores
         <br />
         <small style={{ fontStyle: 'italic' }}>
           Misma funcionalidad, mejor organización y mantenibilidad
