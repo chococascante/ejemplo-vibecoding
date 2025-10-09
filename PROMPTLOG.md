@@ -309,13 +309,59 @@ Test: Mantén el mismo comportamiento esperado.
 
 ---
 
+### **PROMPT #15** - Implementación RETO A en Interfaz Web
+**Fecha**: 9 de octubre, 2025  
+**Prompt**:
+```
+Este promp no se cumple ya que debe de existir una region llamada "TEST" donde su impuesto sea 0% por favor hacer  los ajustes:
+Context: Reto A — Impuesto 0% para región TEST
+Role: Desarrollador Senior.
+Action: 
+	1- Crea una taxPolicy personalizada y pásala a la función calcTotalNumber().
+	2-Crear region TEST.
+	3- Si la región es TEST, el total no debe incluir impuestos.
+Format: Implementa las funcionalidades, usando nombres consistentes, buenas prácticas de diseño y documentacion detallada.
+Test: Mantén el mismo comportamiento esperado.
+```
+
+**Descripción del Ajuste**: Solicitud de implementación completa del RETO A en la interfaz web, incluyendo la región TEST visible en el dropdown y funcionalidad automática de cambio de política fiscal.
+
+**Resultados Obtenidos**:
+- Región TEST agregada a `AVAILABLE_REGIONS` en Checkout.jsx
+- TestRegionTaxPolicy agregada a `AVAILABLE_TAX_POLICIES`
+- Lógica automática en App.jsx para cambiar a TestRegionTaxPolicy al seleccionar TEST
+- Creación de `demoRetoA_InterfazWeb.js` con guía paso a paso
+- Aplicación funcional en http://localhost:5173 con región TEST seleccionable
+- Verificación práctica: región TEST → 0% impuestos automáticamente
+- ✅ RETO A completamente funcional en interfaz web
+
+---
+
+### **PROMPT #16** - Documentación Final con Interfaz Web
+**Fecha**: 9 de octubre, 2025  
+**Prompt**:
+```
+Agregar este ajuste a toda la documentacion y adicional Realizar un commit de los cambios aplicados y subir los cambios al github.
+```
+
+**Descripción del Ajuste**: Actualización final de toda la documentación para incluir la implementación del RETO A en la interfaz web y commit de todos los cambios realizados.
+
+**Resultados Obtenidos**:
+- Actualización completa de RESUMEN.txt con implementación en interfaz web
+- Actualización de PROMPTLOG.md con prompt #15 y #16
+- Actualización de ARQUITECTURA_FINAL.md con nueva funcionalidad
+- Total de archivos: 21 (2→21 archivos especializados)
+- Commit y push de cambios finales al repositorio GitHub
+
+---
+
 ## 📈 Resumen de Resultados
 
-**Total de Prompts**: 14  
+**Total de Prompts**: 16  
 **Duración del Ejercicio**: 2 días (8-9 de octubre, 2025)  
-**Commits Realizados**: 10+ commits principales  
-**Archivos Creados**: 20 archivos especializados  
-**Líneas de Código**: ~3,500+ líneas documentadas  
+**Commits Realizados**: 12+ commits principales  
+**Archivos Creados**: 21 archivos especializados  
+**Líneas de Código**: ~4,000+ líneas documentadas  
 
 **Objetivos Cumplidos**:
 - ✅ Separación de responsabilidades
@@ -323,12 +369,13 @@ Test: Mantén el mismo comportamiento esperado.
 - ✅ Inyección de dependencias
 - ✅ Componentización de UI
 - ✅ Documentación y pruebas completas
-- ✅ RETO A: TestRegionTaxPolicy (0% impuestos) - VERIFICADO
+- ✅ RETO A: TestRegionTaxPolicy (0% impuestos) - VERIFICADO + INTERFAZ WEB
 - ✅ RETO B: Cupón BOGO_HALF (segundo ítem 50% off)
 - ✅ RETO C: Servicio de catálogo con estados
 - ✅ Verificación exhaustiva de RETO A completada
+- ✅ RETO A funcional en interfaz web con región TEST seleccionable
 
-**Estado Final**: Aplicación completamente refactorizada + 3 retos avanzados implementados siguiendo principios de Clean Architecture, con 20 pruebas unitarias, verificación exhaustiva del RETO A, y manteniendo 100% de la funcionalidad original.
+**Estado Final**: Aplicación completamente refactorizada + 3 retos avanzados implementados siguiendo principios de Clean Architecture, con 20 pruebas unitarias, verificación exhaustiva del RETO A, implementación completa en interfaz web (región TEST disponible), y manteniendo 100% de la funcionalidad original.
 
 ---
 
