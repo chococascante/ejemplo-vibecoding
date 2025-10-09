@@ -6,4 +6,7 @@ export const taxPolicies = {
   DEFAULT: { id: 'DEFAULT', rate: 0.10 },
 };
 
+// Política TEST: 0% impuestos
+taxPolicies.TEST = { id: 'TEST', rate: 0 };
+
 export default taxPolicies;

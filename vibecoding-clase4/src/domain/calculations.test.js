@@ -26,3 +26,15 @@ try {
   console.error('FAIL', err.message);
   process.exitCode = 1;
 }
+
+// Verificar también política TEST (0% impuestos)
+const testPolicy = taxPolicies.TEST;
+const resultNoTax = calcTotalNumber(items, user, coupon, testPolicy);
+const expectedNoTax = 175.28; // after discounts and coupon, redondeado
+try {
+  assert.strictEqual(resultNoTax.total, expectedNoTax, `Total sin impuesto esperado ${expectedNoTax}, obtenido ${resultNoTax.total}`);
+  console.log('PASS calcTotalNumber with TEST policy produces expected total:', resultNoTax.total);
+} catch (err) {
+  console.error('FAIL', err.message);
+  process.exitCode = 1;
+}

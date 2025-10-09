@@ -22,6 +22,7 @@ export default function Checkout({ isPremium, onTogglePremium, coupon, onChangeC
           <option value="CR">CR (13%)</option>
           <option value="US-CA">US-CA (7.25%)</option>
           <option value="US-TX">US-TX (6.25%)</option>
+          <option value="TEST">TEST (0%)</option>
           <option value="OTRA">OTRA (10%)</option>
         </select>
       </div>

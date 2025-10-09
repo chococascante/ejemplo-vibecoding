@@ -54,6 +54,7 @@ export default function App() {
   if (regionArg === 'CR') policy = taxPolicies.CR;
   else if (regionArg === 'US-CA' || regionArg === 'US-TX' || regionArg === 'US') policy = taxPolicies.US;
   else if (regionArg === 'MX') policy = taxPolicies.MX;
+  else if (regionArg === 'TEST') policy = taxPolicies.TEST;
 
   const result = calcTotalNumber(cartArg, premiumArg, couponArg, policy);
 
