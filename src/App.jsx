@@ -2,8 +2,13 @@
 
 import { useEffect, useState } from "react";
 
+
 import formatCurrency from "./utils/money";
 import { GLOBAL_LOG_LEVEL, logInfo } from "./utils/log";
+import { computeSubTotal } from "./domain/subtotal";
+import { applyUserDiscounts } from "./domain/discounts";
+import { applyCoupons } from "./domain/coupons";
+import { computeTaxes } from "./domain/taxes";
 
 
 
@@ -46,36 +51,22 @@ export default function App() {
     recalc(copy, isPremium, coupon, region);
   }
 
-  function recalc(cartArg, premiumArg, couponArg, regionArg) {
-    // subtotal
-    let subtotal = 0;
-    for (const item of cartArg) {
-      subtotal += (item.price || 0) * (item.qty || 0);
-    }
-    // premium 5%
-    if (premiumArg) {
-      subtotal = subtotal - subtotal * 0.05;
-  logInfo('Premium -5%');
-    }
-    // cupón
-    if (couponArg === 'PROMO10' && subtotal >= 50) {
-      subtotal = subtotal * 0.90;
-  logInfo('Cupón PROMO10 -10%');
-    } else if (couponArg === 'FIJO20' && subtotal >= 50) {
-      subtotal = subtotal - 20;
-  logInfo('Cupón FIJO20 -$20');
-    }
-    // impuesto por región
-    let taxRate = 0.10;
-    if (regionArg === 'CR') taxRate = 0.13;
-    else if (regionArg === 'US-CA') taxRate = 0.0725;
-    else if (regionArg === 'US-TX') taxRate = 0.0625;
-    const taxes = subtotal * taxRate;
-    let total = subtotal + taxes;
 
+
+  function calcTotalNumber(cartArg, premiumArg, couponArg, regionArg) {
+    let subtotal = computeSubTotal(cartArg);
+    subtotal = applyUserDiscounts(subtotal, premiumArg);
+    subtotal = applyCoupons(subtotal, couponArg);
+    const taxes = computeTaxes(subtotal, regionArg);
+    let total = subtotal + taxes;
     total = Math.round(total * 100) / 100;
+    return { total, subtotal, taxes };
+  }
+
+  function recalc(cartArg, premiumArg, couponArg, regionArg) {
+    const { total, subtotal, taxes } = calcTotalNumber(cartArg, premiumArg, couponArg, regionArg);
     setTotalDisplay(formatCurrency(total));
-  logInfo(`Subtotal=${formatCurrency(subtotal)} Taxes=${formatCurrency(taxes)} Total=${formatCurrency(total)}`);
+    logInfo(`Subtotal=${formatCurrency(subtotal)} Taxes=${formatCurrency(taxes)} Total=${formatCurrency(total)}`);
   }
 
   function handlePremium(e) {
