@@ -16,14 +16,8 @@ import Checkout from "./ui/Checkout";
 
 
 
-// Simula "API"
-async function fetchProducts() {
-  return [
-    { id: 1, name: 'Mouse', price: 20 },
-    { id: 2, name: 'Teclado', price: 35 },
-    { id: 3, name: 'Monitor', price: 150 },
-  ];
-}
+import { fetchProducts } from "./services/catalog";
+
 
 
 
@@ -34,9 +28,21 @@ export default function App() {
   const [coupon, setCoupon] = useState('');
   const [isPremium, setIsPremium] = useState(true);
   const [totalDisplay, setTotalDisplay] = useState('$0.00');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetchProducts().then(setProducts);
+    setLoading(true);
+    setError(null);
+    fetchProducts()
+      .then((data) => {
+        setProducts(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        setError('Error al cargar productos');
+        setLoading(false);
+      });
   }, []);
 
   function addToCart(p) {
@@ -60,7 +66,7 @@ export default function App() {
   function calcTotalNumber(cartArg, premiumArg, couponArg, regionArg) {
     let subtotal = computeSubTotal(cartArg);
     subtotal = applyUserDiscounts(subtotal, premiumArg);
-    subtotal = applyCoupons(subtotal, couponArg);
+    subtotal = applyCoupons(subtotal, couponArg, cartArg);
     const taxes = computeTaxes(subtotal, regionArg);
     let total = subtotal + taxes;
     total = Math.round(total * 100) / 100;
@@ -89,19 +95,25 @@ export default function App() {
   return (
     <div style={{ padding: 16, fontFamily: 'system-ui' }}>
       <h1>Tienda</h1>
-      <div style={{ display: 'flex', gap: 24 }}>
-        <ProductList products={products} onAddToCart={addToCart} />
-        <Cart cart={cart} onChangeQty={changeQty} />
-        <Checkout
-          isPremium={isPremium}
-          onPremiumChange={handlePremium}
-          coupon={coupon}
-          onCouponChange={handleCoupon}
-          region={region}
-          onRegionChange={handleRegion}
-          totalDisplay={totalDisplay}
-        />
-      </div>
+      {loading ? (
+        <p>Cargando...</p>
+      ) : error ? (
+        <p style={{ color: 'red' }}>{error}</p>
+      ) : (
+        <div style={{ display: 'flex', gap: 24 }}>
+          <ProductList products={products} onAddToCart={addToCart} />
+          <Cart cart={cart} onChangeQty={changeQty} />
+          <Checkout
+            isPremium={isPremium}
+            onPremiumChange={handlePremium}
+            coupon={coupon}
+            onCouponChange={handleCoupon}
+            region={region}
+            onRegionChange={handleRegion}
+            totalDisplay={totalDisplay}
+          />
+        </div>
+      )}
     </div>
   );
 }

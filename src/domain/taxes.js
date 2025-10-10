@@ -4,6 +4,7 @@ const TaxStrategy = {
   'CR': (subtotal) => subtotal * 0.13,
   'US-CA': (subtotal) => subtotal * 0.0725,
   'US-TX': (subtotal) => subtotal * 0.0625,
+  'TEST': (subtotal) => 0,
   'DEFAULT': (subtotal) => subtotal * 0.10
 };
 
