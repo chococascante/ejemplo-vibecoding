@@ -4,6 +4,9 @@ import { setLogLevel, LOG_LEVELS, logCartOperation, logInfo } from "./utils/log.
 import { calcTotalNumber } from "./domain/checkout.js";
 import { defaultTaxPolicy, TestRegionTaxPolicy } from "./domain/taxPolicies.js";
 
+// Importar estilos CSS
+import './css/styles.css';
+
 // Importar los nuevos componentes
 import ProductList from "./components/ProductList.jsx";
 import Cart from "./components/Cart.jsx";
@@ -244,116 +247,114 @@ export default function App() {
   }
 
   return (
-    <div style={{ padding: 16, fontFamily: 'system-ui' }}>
-      <h1>Tienda - Arquitectura por Componentes</h1>
+    <div className="app-container">
+      <header className="app-header">
+        <h1 className="app-title">Tienda Clean Architecture</h1>
+        <p className="app-subtitle">Arquitectura moderna con componentes especializados</p>
+      </header>
       
       {/* RETO C: Mostrar estado de carga global si aplica */}
       {isLoadingState(catalogState) && (
-        <div style={{ 
-          padding: '16px', 
-          backgroundColor: '#e3f2fd', 
-          borderRadius: '4px', 
-          marginBottom: '16px',
-          textAlign: 'center',
-          color: '#1976d2'
-        }}>
-          <div style={{ marginBottom: '8px' }}>🔄 Cargando productos del catálogo...</div>
-          <div style={{ fontSize: '0.9em', color: '#666' }}>
-            Esto puede tomar unos segundos
-          </div>
+        <div className="app-loading">
+          <div className="app-loading-spinner"></div>
+          <div className="app-loading-text">🔄 Cargando productos del catálogo...</div>
+          <small>Esto puede tomar unos segundos</small>
         </div>
       )}
 
       {/* RETO C: Mostrar error global si aplica */}
       {isErrorState(catalogState) && (
-        <div style={{ 
-          padding: '16px', 
-          backgroundColor: '#ffebee', 
-          borderRadius: '4px', 
-          marginBottom: '16px',
-          border: '1px solid #f44336'
-        }}>
-          <div style={{ color: '#d32f2f', fontWeight: 'bold', marginBottom: '8px' }}>
-            ❌ Error cargando productos
-          </div>
-          <div style={{ color: '#666', marginBottom: '12px' }}>
+        <div className="app-error">
+          <div className="app-error-title">❌ Error cargando productos</div>
+          <div className="app-error-message">
             {formatCatalogError(catalogErrorType, catalogError)}
           </div>
           <button 
             onClick={loadProducts}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: '#f44336',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
+            className="product-add-button mt-4"
           >
             🔄 Reintentar
           </button>
         </div>
       )}
       
-      <div style={{ display: 'flex', gap: 24 }}>
+      <main className="app-main-content">
         {/* Componente ProductList - Lista de productos */}
-        <ProductList 
-          products={products}
-          onAddToCart={handleAddToCart}
-          loading={isLoadingState(catalogState)}
-          error={isErrorState(catalogState) ? formatCatalogError(catalogErrorType, catalogError) : null}
-          onRetry={loadProducts}
-        />
+        <section className="app-products-section">
+          <ProductList 
+            products={products}
+            onAddToCart={handleAddToCart}
+            loading={isLoadingState(catalogState)}
+            error={isErrorState(catalogState) ? formatCatalogError(catalogErrorType, catalogError) : null}
+            onRetry={loadProducts}
+          />
+        </section>
 
-        {/* Componente Cart - Gestión del carrito */}
-        <Cart 
-          cartItems={cart}
-          onChangeQuantity={handleChangeQuantity}
-          onRemoveItem={handleRemoveItem}
-          showSubtotal={true}
-          editable={true}
-        />
+        {/* Barra lateral con carrito y checkout */}
+        <aside className="app-sidebar">
+          {/* Componente Cart - Gestión del carrito */}
+          <section className="app-sidebar-section">
+            <Cart 
+              cartItems={cart}
+              onChangeQuantity={handleChangeQuantity}
+              onRemoveItem={handleRemoveItem}
+              showSubtotal={true}
+              editable={true}
+            />
+          </section>
 
-        {/* Componente Checkout - Proceso de checkout */}
-        <Checkout 
-          isPremium={isPremium}
-          coupon={coupon}
-          region={region}
-          totalDisplay={totalDisplay}
-          onPremiumChange={handlePremium}
-          onCouponChange={handleCoupon}
-          onRegionChange={handleRegion}
-          onTaxPolicyChange={handleTaxPolicyChange}
-          calculationDetails={lastCalculationDetails}
-          showAdvancedOptions={false} // Cambiar a true para mostrar opciones avanzadas
-        />
-      </div>
+          {/* Componente Checkout - Proceso de checkout */}
+          <section className="app-sidebar-section">
+            <Checkout 
+              isPremium={isPremium}
+              coupon={coupon}
+              region={region}
+              totalDisplay={totalDisplay}
+              onPremiumChange={handlePremium}
+              onCouponChange={handleCoupon}
+              onRegionChange={handleRegion}
+              onTaxPolicyChange={handleTaxPolicyChange}
+              calculationDetails={lastCalculationDetails}
+              showAdvancedOptions={false} // Cambiar a true para mostrar opciones avanzadas
+            />
+          </section>
+        </aside>
+      </main>
 
       {/* Footer informativo */}
-      <div style={{ 
-        marginTop: '32px', 
-        padding: '16px', 
-        backgroundColor: '#f5f5f5', 
-        borderRadius: '4px',
-        fontSize: '0.9em',
-        color: '#666'
-      }}>
-        <strong>🏗️ Arquitectura Refactorizada:</strong>
-        <br />
-        ✅ <strong>ProductList</strong>: Componente especializado para mostrar productos
-        <br />
-        ✅ <strong>Cart</strong>: Componente dedicado para gestión del carrito
-        <br />
-        ✅ <strong>Checkout</strong>: Componente para proceso de compra y cálculos
-        <br />
-        ✅ <strong>App</strong>: Orquestador que conecta componentes con dominio
-        <br />
-        ✅ <strong>RETO C</strong>: Servicio de catálogo con manejo de carga y errores
-        <br />
-        <small style={{ fontStyle: 'italic' }}>
-          Misma funcionalidad, mejor organización y mantenibilidad
-        </small>
-      </div>
+      <footer className="app-project-info">
+        <h3 className="app-project-title">
+          🏗️ Arquitectura Refactorizada
+        </h3>
+        <div className="app-project-description">
+          <ul className="app-architecture-list">
+            <li className="app-architecture-item">
+              <span className="app-architecture-highlight">ProductList</span>: Componente especializado para mostrar productos
+            </li>
+            <li className="app-architecture-item">
+              <span className="app-architecture-highlight">Cart</span>: Componente dedicado para gestión del carrito
+            </li>
+            <li className="app-architecture-item">
+              <span className="app-architecture-highlight">Checkout</span>: Componente para proceso de compra y cálculos
+            </li>
+            <li className="app-architecture-item">
+              <span className="app-architecture-highlight">App</span>: Orquestador que conecta componentes con dominio
+            </li>
+            <li className="app-architecture-item">
+              <span className="app-architecture-highlight">RETO A</span>: TestRegionTaxPolicy - Región TEST con 0% impuestos
+            </li>
+            <li className="app-architecture-item">
+              <span className="app-architecture-highlight">RETO B</span>: Cupón BOGO_HALF - Buy One Get One Half
+            </li>
+            <li className="app-architecture-item">
+              <span className="app-architecture-highlight">RETO C</span>: Servicio de catálogo con manejo de carga y errores
+            </li>
+          </ul>
+          <div className="app-architecture-note">
+            Misma funcionalidad, mejor organización y mantenibilidad
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
