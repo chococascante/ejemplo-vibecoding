@@ -1,0 +1,237 @@
+/* ==============================================
+   COMPONENTE APP - Estilos principales
+   ============================================== */
+
+.app-container {
+  min-height: 100vh;
+  max-width: var(--max-width-xl);
+  margin: 0 auto;
+  padding: var(--space-md);
+  background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+}
+
+.app-header {
+  text-align: center;
+  margin-bottom: var(--space-xl);
+  padding: var(--space-lg);
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  animation: fadeIn 0.6s ease-out;
+}
+
+.app-title {
+  font-size: var(--font-size-3xl);
+  font-weight: 700;
+  color: var(--primary-color);
+  margin-bottom: var(--space-sm);
+  background: linear-gradient(45deg, var(--primary-color), var(--accent-color));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.app-subtitle {
+  font-size: var(--font-size-lg);
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+.app-main-content {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-xl);
+  animation: fadeIn 0.8s ease-out 0.2s both;
+}
+
+/* Layout responsive para escritorio */
+@media (min-width: 1024px) {
+  .app-main-content {
+    grid-template-columns: 2fr 1fr;
+    gap: var(--space-2xl);
+  }
+}
+
+/* Contenedor de productos */
+.app-products-section {
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  transition: all var(--transition-normal);
+}
+
+.app-products-section:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+/* Barra lateral (carrito + checkout) */
+.app-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.app-sidebar-section {
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  transition: all var(--transition-normal);
+}
+
+.app-sidebar-section:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+/* Información del proyecto */
+.app-project-info {
+  background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  margin-top: var(--space-xl);
+  animation: fadeIn 1s ease-out 0.4s both;
+}
+
+.app-project-title {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-md);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.app-project-description {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.app-architecture-list {
+  list-style: none;
+  margin-top: var(--space-md);
+}
+
+.app-architecture-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-xs) 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+}
+
+.app-architecture-item::before {
+  content: "✅";
+  font-size: var(--font-size-xs);
+}
+
+.app-architecture-highlight {
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.app-architecture-note {
+  font-style: italic;
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  margin-top: var(--space-sm);
+}
+
+/* Estados de carga */
+.app-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2xl);
+  gap: var(--space-md);
+}
+
+.app-loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border-color);
+  border-top: 3px solid var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.app-loading-text {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Estado de error */
+.app-error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: var(--danger-color);
+  padding: var(--space-lg);
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+
+.app-error-title {
+  font-weight: 600;
+  margin-bottom: var(--space-sm);
+}
+
+.app-error-message {
+  font-size: var(--font-size-sm);
+  opacity: 0.8;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .app-container {
+    padding: var(--space-sm);
+  }
+  
+  .app-header {
+    padding: var(--space-md);
+  }
+  
+  .app-title {
+    font-size: var(--font-size-2xl);
+  }
+  
+  .app-main-content {
+    gap: var(--space-lg);
+  }
+  
+  .app-project-info {
+    padding: var(--space-md);
+  }
+}
+
+/* Mejoras de accesibilidad */
+@media (prefers-reduced-motion: reduce) {
+  .app-container *,
+  .app-container *::before,
+  .app-container *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Modo oscuro (preparado para futura implementación) */
+@media (prefers-color-scheme: dark) {
+  .app-container {
+    --bg-primary: #1e293b;
+    --bg-secondary: #0f172a;
+    --bg-tertiary: #334155;
+    --text-primary: #f1f5f9;
+    --text-secondary: #cbd5e1;
+    --border-color: #475569;
+  }
+}
